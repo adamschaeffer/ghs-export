@@ -45,7 +45,7 @@ import prob.pix.pxSocket;
 import prob.util.DBConnection;
 import prob.util.Property_Set;
 
-public class GHSExtract /*extends DataFile<GHSDao>*/ {//TODO: ELIMINATE DATAFILE
+public class GHSExtract {
 	//LOGGER SETTINGS
 	private static final Logger GhsLog = Logger.getLogger(GHSExtract.class.getName());
 	private static final Level loglevel = Level.FINER;
@@ -85,14 +85,12 @@ public class GHSExtract /*extends DataFile<GHSDao>*/ {//TODO: ELIMINATE DATAFILE
 	//Constructors
 	//////////////////////////////////////////////////////////////////
 	public GHSExtract(Property_Set props,String jndi_name) throws NamingException, SQLException {
-		conn = new DBConnection(jndi_name);//TODO: eliminate DataFile
-		//super(jndi_name,null,null,null);
+		conn = new DBConnection(jndi_name);
 		export_props = props;
 		initialize();
 	}
 	public GHSExtract(Property_Set props,String host,String driver,String username,String password){
-		conn = new DBConnection(host,driver,username,password);//TODO: eliminate DataFile
-		//super(host,driver,username,password);
+		conn = new DBConnection(host,driver,username,password);
 		export_props = props;
 		initialize();
 	}
@@ -153,7 +151,6 @@ public class GHSExtract /*extends DataFile<GHSDao>*/ {//TODO: ELIMINATE DATAFILE
 	 * @throws SQLException if there is a problem with the query or database.
 	 * 
 	 */
-	//@Override TODO: ELIMINATE DATAFILE
 	protected void setFile(ResultSet rs) throws Exception {
 		try{
 			GHSDao tmp;
