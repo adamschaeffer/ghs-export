@@ -247,14 +247,15 @@ public class GHSExtract {
 				exportID       = currentRow.export_id;
 				questionsAdded = 1;
 
-				processedRowBuffer.append(getProcessedData(processedRowBuffer, new Integer(questionsAdded).toString(), currentRow,"all"));				
+				processedRowBuffer.append(getProcessedDataForHeader(processedRowBuffer,currentRow))
+				                  .append(getProcessedDataForLine(processedRowBuffer,currentRow,questionsAdded));
 			}
 			else{
 				questionsAdded++;
 				if(questionsAdded > NUM_QUESTIONS) 
 					continue;
 				else
-					processedRowBuffer.append(getProcessedData(processedRowBuffer, new Integer(questionsAdded).toString(), currentRow,"line"));
+					processedRowBuffer.append(getProcessedDataForLine(processedRowBuffer,currentRow,questionsAdded));
 			}
 		}
 		appendPaddingForBlanks(processedRowBuffer, questionsAdded);
@@ -267,18 +268,13 @@ public class GHSExtract {
 
 		return processingErrors;
 	}
-	private String getProcessedData(StringBuffer processedRowBuffer,String questionsAdded, GHSDao currentRow,String dataToProcess) {
-		String rtn;
-		HashMap<String,String> customVals = new HashMap<String,String>();
-		customVals.put("set_id",questionsAdded);
-		if(dataToProcess.toLowerCase().equals("all"))
-			rtn = currentRow.toString_all(customVals);
-		else if(dataToProcess.toLowerCase().equals("line"))
-			rtn = currentRow.toString_line(customVals);
-		else
-			rtn = null;
-		
-		return rtn;
+	private String getProcessedDataForHeader(StringBuffer processedRowBuffer,GHSDao currentRow){
+		return currentRow.toString_head(null);
+	}
+	private String getProcessedDataForLine(StringBuffer processedRowBuffer,GHSDao currentRow,int numQuestions){
+		HashMap<String,String> customValues = new HashMap<String,String>();
+		customValues.put("set_id",new Integer(numQuestions).toString());
+		return currentRow.toString_line(customValues);
 	}
 	private void appendPaddingForBlanks(StringBuffer theRow, int questionsAdded) {
 		if(questionsAdded >= NUM_QUESTIONS)
