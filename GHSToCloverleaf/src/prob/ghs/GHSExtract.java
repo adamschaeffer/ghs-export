@@ -145,13 +145,14 @@ public class GHSExtract {
 	//Helper functions to obtain data from database
 	//////////////////////////////////////////////////////////////////
 	/**
-	 * Uses the ResultSet from the SQL query to create a list of GHSDao objects to represent the data extract.
-	 * Thus, the format of the data that this class is working with will be a list of bean-like objects.
+	 * Uses the ResultSet from the SQL query to create a list of GHSDao 
+	 * objects to represent the data extract.
 	 * 
+	 * @param rs - ResultSet from an SQL query.
 	 * @throws SQLException if there is a problem with the query or database.
 	 * 
 	 */
-	protected void setFile(ResultSet rs) throws Exception {
+	private void setUpQueryResults(ResultSet rs) throws Exception {
 		try{
 			GHSDao tmp;
 			while(rs.next()){
@@ -181,7 +182,7 @@ public class GHSExtract {
 	//////////////////////////////////////////////////////////////////
 	//Helper functions to send data to cloverleaf.
 	//////////////////////////////////////////////////////////////////
-	protected void InitializeProcessing(){
+	private void InitializeProcessing(){
 		String hostName = export_props.getProperty("host",true);
 		int port  		= Integer.parseInt(export_props.getProperty("port",true));
 		int Timeout_ms  = Integer.parseInt(export_props.getProperty("timeout",true));
@@ -194,7 +195,7 @@ public class GHSExtract {
 			throw e;
 		}
 	}
-	protected void CloseProcessing(){
+	private void CloseProcessing(){
 		sock.close();
 		conn.close();
 	}
@@ -205,9 +206,8 @@ public class GHSExtract {
 	 * @throws Exception 
 	 */
 	public ArrayList<String> ProcessData() throws RuntimeException{
-		//runQuery();
 		try {
-			setFile(conn.Query(QUERY));
+			setUpQueryResults(conn.Query(QUERY));
 		} catch (SQLException e) {
 			throw new RuntimeException("SQL Error: " + e.getMessage(),e);
 		} catch (Exception e) {
@@ -221,61 +221,69 @@ public class GHSExtract {
 
 		GhsLog.fine("Query completed. Processing data beginning.");
 
-		ArrayList<String> errors = new ArrayList<String>();
+		ArrayList<String> processingErrors = new ArrayList<String>();
 		try{
 			InitializeProcessing();
 		} catch(RuntimeException e){
 			throw e;
 		}
 		
-		String current_session   = null;
-		String exportID          = null;
-		StringBuffer process_row = new StringBuffer("");
-		Iterator<GHSDao> i       = theFile.iterator();
-		int numQuestions         = 0;
+		String currentSession           = null;
+		String exportID                 = null;
+		StringBuffer processedRowBuffer = new StringBuffer("");
+		Iterator<GHSDao> i              = theFile.iterator();
+		int questionsAdded              = 0;
 		
 		while(i.hasNext()){
-			GHSDao examine_row = (GHSDao) i.next();
-			
-			//if starting a new session
-			if(current_session==null || !current_session.equals(examine_row.session_id)){
+			GHSDao currentRow = (GHSDao) i.next();
+
+			if(currentSession==null || !currentSession.equals(currentRow.session_id)){
 				if(exportID!=null){
 					GhsLog.fine("Sending data to Cloverleaf for Export ID = " + exportID);
-					//pad spaces for unanswered questions
-					if(numQuestions < NUM_QUESTIONS){
-						process_row.append(repeatChar(" ",QUESTIONS_LENGTH*(NUM_QUESTIONS-numQuestions)));
-					}
-					SendToCL(process_row,exportID,errors,current_session);
+					appendPaddingForBlanks(processedRowBuffer,questionsAdded);
+					SendToCL(processedRowBuffer,exportID,processingErrors,currentSession);
 				}
-				current_session = examine_row.session_id;
-				exportID = examine_row.export_id;
-				numQuestions = 1;
-				
-				HashMap<String,String> customVals = new HashMap<String,String>();
-				customVals.put("set_id",new Integer(numQuestions).toString());
-				process_row.append(examine_row.toString_all(customVals));				
+				currentSession = currentRow.session_id;
+				exportID       = currentRow.export_id;
+				questionsAdded = 1;
+
+				processedRowBuffer.append(getProcessedData(processedRowBuffer, new Integer(questionsAdded).toString(), currentRow,"all"));				
 			}
-			else{//if this is another question in the current session
-				numQuestions++;
-				if(numQuestions > NUM_QUESTIONS) 
+			else{
+				questionsAdded++;
+				if(questionsAdded > NUM_QUESTIONS) 
 					continue;
-				else {
-					HashMap<String,String> customVals = new HashMap<String,String>();
-					customVals.put("set_id",new Integer(numQuestions).toString());
-					process_row.append(examine_row.toString_line(customVals));
-				}
+				else
+					processedRowBuffer.append(getProcessedData(processedRowBuffer, new Integer(questionsAdded).toString(), currentRow,"line"));
 			}
 		}
-		if(numQuestions < NUM_QUESTIONS){
-			process_row.append(repeatChar(" ",QUESTIONS_LENGTH*(NUM_QUESTIONS-numQuestions)));
-		}
-		SendToCL(process_row,exportID,errors,current_session);
+		appendPaddingForBlanks(processedRowBuffer, questionsAdded);
 		GhsLog.fine("Sending data to Cloverleaf for Export ID = " + exportID);
+		SendToCL(processedRowBuffer,exportID,processingErrors,currentSession);
+
 		CloseProcessing();
 		
 		GhsLog.fine("Data processing complete.");
 
-		return errors;
+		return processingErrors;
+	}
+	private String getProcessedData(StringBuffer processedRowBuffer,String questionsAdded, GHSDao currentRow,String dataToProcess) {
+		String rtn;
+		HashMap<String,String> customVals = new HashMap<String,String>();
+		customVals.put("set_id",questionsAdded);
+		if(dataToProcess.toLowerCase().equals("all"))
+			rtn = currentRow.toString_all(customVals);
+		else if(dataToProcess.toLowerCase().equals("line"))
+			rtn = currentRow.toString_line(customVals);
+		else
+			rtn = null;
+		
+		return rtn;
+	}
+	private void appendPaddingForBlanks(StringBuffer theRow, int questionsAdded) {
+		if(questionsAdded >= NUM_QUESTIONS)
+			return;
+		theRow.append(repeatChar(" ",QUESTIONS_LENGTH*(NUM_QUESTIONS-questionsAdded)));
 	}
 	
 	private void SendToCL(StringBuffer process_row,String exportID,ArrayList<String> errors,String current_session){
@@ -325,7 +333,7 @@ public class GHSExtract {
 	 * @throws AcknowledgementException If Cloverleaf does not acknowledge receipt of a record.
 	 * @throws SQLException 
 	 */
-	protected void ProcessRow(String theRecord) throws AcknowledgmentException {
+	private void ProcessRow(String theRecord) throws AcknowledgmentException {
 		GhsLog.finer("Sending data to Cloverleaf. Full text: : " + padZeros(theRecord.length(),6)+theRecord);
 		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord);
 		

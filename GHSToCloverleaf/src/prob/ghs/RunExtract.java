@@ -106,7 +106,7 @@ public class RunExtract {
 								      prop.getProperty("password",false));
 			}
 			
-			db.Update("update staging set is_acknowledged=null,processed_date=null,processed_time=null where export_id >= 10");
+			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where export_id >= 12;");
 		} catch (NamingException e) {
 			return e.getClass() + ": " + e.getMessage();
 		} catch (SQLException e) {
@@ -117,13 +117,15 @@ public class RunExtract {
 			if(db!=null)
 				db.close();
 		}
-		return ExportGHS("all");
+		
+		StringBuilder rtn = new StringBuilder("Running ALL export:<br>").append(ExportGHS("all")).append("<br><br>");
+		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
+		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
+		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
+		return rtn.toString();
 	}
 
 	public static void main(String args[]){
-		System.out.println(ExportGHS("all"));
-		System.out.println(ExportGHS("prob"));
-		System.out.println(ExportGHS("dhs"));
-		System.out.println(ExportGHS("dmh"));
+		System.out.println(resendTestRecords());
 	}
 }
