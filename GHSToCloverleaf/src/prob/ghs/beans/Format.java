@@ -1,4 +1,4 @@
-package prob.util;
+package prob.ghs.beans;
 
 public class Format {
 	public static String format(String StringToFormat, int NewLength, char PaddingCharacter, char Pad_Direction){
