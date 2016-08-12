@@ -29,7 +29,7 @@ public class pxSocket{
   Socket sock;
 
   DataOutputStream out;
-
+  
   DataInputStream  in;
 
   public pxSocket(String host, int port, int timeout){
@@ -44,7 +44,6 @@ public class pxSocket{
 
       //2. get Input and Output streams
       out = new DataOutputStream(sock.getOutputStream());
-
       in  = new DataInputStream(sock.getInputStream());
 
     } catch(UnknownHostException unknownHost){

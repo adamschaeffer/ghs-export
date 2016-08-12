@@ -123,6 +123,7 @@ public class GHSExtract {
 		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"set_id",3,"R"," ",true,true));
 		FILE_FORMAT.add(new FRLField("question_response",200,"R"," ",true,false));
 		FILE_FORMAT.add(new FRLField("question_scale",80,"R"," ",true,false));
+		FILE_FORMAT.add(new FRLField("question",200,"R"," ",true,false));
 		
 		for(int i = 0; i < FILE_FORMAT.size(); i++){
 			if(FILE_FORMAT.get(i).field_name.contains(CUSTOM_MARKER))
@@ -180,7 +181,9 @@ public class GHSExtract {
 	}
 	private void loadDataIntoList(ResultSet rs) throws Exception {
 		try{
-			SessionAndResponseData currentSessionData = new SessionAndResponseData();
+			SessionAndResponseData currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+			currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
+			
 			while(rs.next()){
 				DbRow thisRow = getDbRow(rs);
 				
@@ -225,7 +228,7 @@ public class GHSExtract {
 			
 			if(thisField.field_name.contains(CUSTOM_MARKER))
 				continue;
-			
+
 			FieldToSet = thisField.field_name;
 			ValueToSet = rs.getString(FieldToSet);
 			
@@ -301,7 +304,7 @@ public class GHSExtract {
 	 * @throws AcknowledgementException If Cloverleaf does not acknowledge receipt of a record.
 	 */
 	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException {
-		GhsLog.finer("Sending data to Cloverleaf. Full text: : " + padZeros(theRecord.length(),6)+theRecord);
+		GhsLog.finer("Sending data to Cloverleaf. Full text: " + padZeros(theRecord.length(),6)+theRecord);
 		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord);
 		
 		if(!sock.recvAck()){//no acknowledgment, or acknowledged with incorrect sequence 
