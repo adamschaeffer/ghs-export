@@ -117,12 +117,12 @@ public class RunExtract {
 			if(db!=null)
 				db.close();
 		}
-
+ 
 		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
-		rtn.append(ExportGHS("all")).append("<br><br>");
+//		rtn.append(ExportGHS("all")).append("<br><br>");
 		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
-		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
-		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
+//		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
+//		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
 		return rtn.toString();
 	}
 

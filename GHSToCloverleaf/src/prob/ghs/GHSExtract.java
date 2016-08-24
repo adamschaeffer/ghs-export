@@ -27,6 +27,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
@@ -140,7 +142,7 @@ public class GHSExtract {
 							   " order by export_id,question_alias asc;";
 		GhsLog.finer("Query initialized: " + QUERY);
 	}
-	
+
 	public ArrayList<String> ProcessData(){
 		getDataFromDB();
 		
@@ -156,14 +158,24 @@ public class GHSExtract {
 		
 		Iterator<SessionAndResponseData> iterator = theFile.iterator();
 		while(iterator.hasNext()){
+			SessionAndResponseData data = iterator.next();
+			data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));
 			try{
-				processRow(iterator.next());
+				processRow(data);
 			} catch(Exception e){
 				processingErrors.add(e.getMessage());
 			}			
+			try {
+				data.CreateWordDocument(new FileOutputStream("testpoi_"+data.getSessionID()+".docx"));
+			} catch (FileNotFoundException e) {
+				throw new RuntimeException(e.getClass() + ": " + e.getMessage());
+			} catch (IOException e) {
+				throw new RuntimeException(e.getClass() + ": " + e.getMessage());
+			}
 		}
 		closeProcessing();
-		
+
+
 		GhsLog.fine("Data processing complete.");
 
 		return processingErrors;
