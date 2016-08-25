@@ -22,7 +22,7 @@ public final class JobScheduler implements NotificationListener {
 		timer.start();
 		System.out.println("JobScheduler started.");
 	}
-	
+
 	@Override
 	public void handleNotification(Notification notif, Object handback){
 		String type = notif.getType();

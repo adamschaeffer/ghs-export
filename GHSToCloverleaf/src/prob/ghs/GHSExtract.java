@@ -163,7 +163,7 @@ public class GHSExtract {
 			try{
 				processRow(data);
 			} catch(Exception e){
-				processingErrors.add(e.getMessage());
+				processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
 			}			
 			try {
 				data.CreateWordDocument(new FileOutputStream("testpoi_"+data.getSessionID()+".docx"));
@@ -174,7 +174,6 @@ public class GHSExtract {
 			}
 		}
 		closeProcessing();
-
 
 		GhsLog.fine("Data processing complete.");
 
@@ -201,7 +200,8 @@ public class GHSExtract {
 				
 				if(!currentSessionData.isSameSession(thisRow.session)){
 					theFile.add(currentSessionData);
-					currentSessionData = new SessionAndResponseData();
+					currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+					currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 				}
 
 				currentSessionData.addSessionData(thisRow.session);
@@ -303,6 +303,8 @@ public class GHSExtract {
 			}
 		} catch(SQLException e){
 			throw new RuntimeException("Unable to mark Session ID "+process_row.getSessionID()+" as acknowledged.",e);
+		} catch(NullPointerException e){
+			throw new RuntimeException("Null pointer exception found when converting to FRL format.",e);
 		}
 		GhsLog.fine("Staging table updated successfully for Export ID " + process_row.getSessionID());
 	}
@@ -317,7 +319,7 @@ public class GHSExtract {
 	 */
 	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException {
 		GhsLog.finer("Sending data to Cloverleaf. Full text: " + padZeros(theRecord.length(),6)+theRecord);
-		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord);
+		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord + "\r\n");
 		
 		if(!sock.recvAck()){//no acknowledgment, or acknowledged with incorrect sequence 
 			throw new AcknowledgmentException("No acknowledgement received from Cloverleaf.");

@@ -19,5 +19,9 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="oracle.eclipse.tools.weblogic.lib.application/GHSExport"/>
+	<classpathentry kind="lib" path="H:/Libraries/poi-3.14/poi-3.14-20160307.jar"/>
+	<classpathentry kind="lib" path="H:/Libraries/poi-3.14/poi-ooxml-3.14-20160307.jar"/>
+	<classpathentry kind="lib" path="H:/Libraries/poi-3.14/poi-ooxml-schemas-3.14-20160307.jar"/>
+	<classpathentry kind="lib" path="H:/Libraries/poi-3.14/ooxml-lib/xmlbeans-2.6.0.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

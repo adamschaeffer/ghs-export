@@ -50,7 +50,7 @@ public class pxSocket{
       pxLog.severe("Trying to connect to an unknown host.");
       throw new RuntimeException("Trying to connect to an unknown host.");
     } catch(ConnectException connectException){
-      pxLog.severe("Host found but not listening on specified port.");
+      pxLog.severe("Host found but not listening on specified port." + connectException.getMessage());
       throw new RuntimeException("Host found but not listening on specified port.");
     } catch(IOException ioException){
       ioException.printStackTrace();

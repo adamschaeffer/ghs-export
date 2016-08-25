@@ -46,9 +46,9 @@ public class RunExtract {
 										 prop.getProperty("password",false));
 			}
 			errors = frlFile.ProcessData();
-
+			
 			if(!errors.isEmpty()){
-				final Property_Set mailProps = new Property_Set("mailserv");
+				final Property_Set mailProps = new Property_Set("mailserv"); 
 		 		String to   = "adam.schaeffer@probation.lacounty.gov";
 				String from = "adam.schaeffer@probation.lacounty.gov";
 
@@ -56,7 +56,7 @@ public class RunExtract {
 					   port     = mailProps.getProperty("port",true),
 					   username = mailProps.getProperty("username",true),
 					   password = mailProps.getProperty("password",true);
-				
+
 				try{
 					MailServer mail = new MailServer(hostname,port,username,Encrypt.decrypt(password));
 					StringBuffer theEmailBody = new StringBuffer("There were errors present when the GHS system data was exported for processing. A summary of those errors is as follows: \n\n");
@@ -106,7 +106,7 @@ public class RunExtract {
 								      prop.getProperty("password",false));
 			}
 			
-			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where export_id >= 12;");
+			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where export_id >= 10;");
 		} catch (NamingException e) {
 			return e.getClass() + ": " + e.getMessage();
 		} catch (SQLException e) {
@@ -117,12 +117,12 @@ public class RunExtract {
 			if(db!=null)
 				db.close();
 		}
- 
+
 		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
-//		rtn.append(ExportGHS("all")).append("<br><br>");
+		rtn.append(ExportGHS("all")).append("<br><br>");
 		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
-//		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
-//		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
+		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
+		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
 		return rtn.toString();
 	}
 
