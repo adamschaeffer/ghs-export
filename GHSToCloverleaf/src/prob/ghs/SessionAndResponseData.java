@@ -1,17 +1,10 @@
 package prob.ghs;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
 
 import prob.ghs.beans.Format;
 import prob.ghs.beans.ResponseBean;
@@ -58,6 +51,9 @@ public class SessionAndResponseData {
 	}
 	public String getSessionID(){
 		return new String(session.session_id);
+	}
+	public String getPDJ() {
+		return session.mpdj;
 	}
 
 	@Override
@@ -111,53 +107,5 @@ public class SessionAndResponseData {
 							.append(Format.format(" ",80));
 		}
 		return outputString.toString();
-	}
-	
-	public String CreateWordDocument(FileOutputStream out) throws IOException{
-		XWPFDocument document = new XWPFDocument();
-		StringBuffer printout = new StringBuffer();
-
-		XWPFParagraph titleParagraph = document.createParagraph();
-		titleParagraph.setAlignment(ParagraphAlignment.CENTER);
-		XWPFRun run = titleParagraph.createRun();
-		run.setText("GHS QUESTIONNAIRE ALERT - " + customValues.get("export_type"));
-		run.setBold(true);
-		run.addCarriageReturn();
-		
-        XWPFParagraph headerParagraph = document.createParagraph();
-        XWPFRun runHead = headerParagraph.createRun();
-        runHead.setText("Minor: "+session.minor_lastname+", "+session.minor_firstname);
-        runHead.addCarriageReturn();
-        runHead.setText("Date of Birth: " + session.minor_dob);
-        runHead.addCarriageReturn();
-        runHead.setText("PDJ NO: "+session.mpdj);
-        runHead.addCarriageReturn();
-        runHead.setText("Start Date/Time: " + session.start_date + " " + session.start_time);
-        runHead.addCarriageReturn();
-		runHead.setText("End Date/Time: " + session.start_date + " " + session.end_time);
-        runHead.addCarriageReturn();
-		runHead.setText("Facility: " + session.facility_id);
-        runHead.addCarriageReturn();
-		runHead.setText("Provider: " + session.admin_lastname + ", " + session.admin_firstname);
-        runHead.addCarriageReturn();
-		runHead.setText("GHS Session ID: " + session.session_id);
-        runHead.addCarriageReturn();
-
-        XWPFParagraph questionParagraph = document.createParagraph();
-		for(int i = 0; i < responses.size(); i++){
-	        XWPFRun runQ = questionParagraph.createRun();
-
-	        printout.delete(0,printout.length());
-			ResponseBean response = responses.get(i);
-			runQ.setText(response.question);
-			runQ.addCarriageReturn();
-			runQ.setText(response.question_response);
-	        runQ.addCarriageReturn();
-	        runQ.addCarriageReturn();
-		}
-		document.write(out);
-		out.close();
-
-		return printout.toString();
 	}
 }

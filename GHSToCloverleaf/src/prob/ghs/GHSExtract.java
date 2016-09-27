@@ -31,6 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.FileHandler;
@@ -40,6 +41,8 @@ import java.util.logging.SimpleFormatter;
 
 import javax.naming.NamingException;
 
+import com.bea.logging.LogLevel;
+
 import prob.ghs.beans.ResponseBean;
 import prob.ghs.beans.SessionBean;
 import prob.ghs.exception.AcknowledgmentException;
@@ -47,10 +50,11 @@ import prob.ghs.FRLField;
 import prob.pix.pxSocket;
 import prob.util.DBConnection;
 import prob.util.Property_Set;
+import prob.util.Printer;
 
 public class GHSExtract {
 	private static final Logger GhsLog                = Logger.getLogger(GHSExtract.class.getName());
-	private static final Level loglevel               = Level.FINER;
+	private static final Level loglevel               = Level.WARNING;
 	
 	private static final String CUSTOM_MARKER         = "**CUSTOM**"; 
 	
@@ -59,6 +63,7 @@ public class GHSExtract {
 	private pxSocket sock                             = null;
 	private Property_Set export_props                 = null;
 	private DBConnection conn                         = null;
+	private StringBuilder printMessage                = new StringBuilder("");
 	private ArrayList<SessionAndResponseData> theFile = new ArrayList<SessionAndResponseData>();
 
 	private SimpleDateFormat datetime_format          = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -77,7 +82,7 @@ public class GHSExtract {
 		GhsLog.setLevel(loglevel);
 		FileHandler h = null;
 			try {
-				h = new FileHandler("GHS_Export_Log_%u.txt");
+				h = new FileHandler("GHS_Export_Log.txt");
 				h.setLevel(loglevel);
 				h.setFormatter(new SimpleFormatter());
 			} catch (SecurityException e) {
@@ -99,6 +104,8 @@ public class GHSExtract {
 	
 	private void initialize(Property_Set props) {
 		export_props = props;
+		
+		printMessage.append(props.getProperty("title",false)).append(" GHS Export Completed. Results as follows:\n\n");
 		
 		StringBuffer t = new StringBuffer("select distinct ");
 		FILE_FORMAT = new ArrayList<FRLField>();
@@ -155,31 +162,47 @@ public class GHSExtract {
 
 		ArrayList<String> processingErrors = new ArrayList<String>();
 		initializeProcessing();
-		
-		Iterator<SessionAndResponseData> iterator = theFile.iterator();
-		while(iterator.hasNext()){
-			SessionAndResponseData data = iterator.next();
-			data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));
-			try{
-				processRow(data);
-			} catch(Exception e){
-				processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
-			}			
-			try {
-				data.CreateWordDocument(new FileOutputStream("testpoi_"+data.getSessionID()+".docx"));
-			} catch (FileNotFoundException e) {
-				throw new RuntimeException(e.getClass() + ": " + e.getMessage());
-			} catch (IOException e) {
-				throw new RuntimeException(e.getClass() + ": " + e.getMessage());
+		try{
+			Iterator<SessionAndResponseData> iterator = theFile.iterator();
+			while(iterator.hasNext()){
+				SessionAndResponseData data = iterator.next();
+				data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));
+				try{
+					processRow(data);
+					printMessage.append("PDJ # ").append(data.getPDJ()).append(" has finished a survey.\n");
+				} catch(Exception e){
+					processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
+				}	
 			}
+		} catch(Exception e){
+			processingErrors.add("Unknown error occured. Details: " + e.getClass() + ": " + e.getMessage());
 		}
-		closeProcessing();
+		finally{
+			closeProcessing();
+			
+			print(printMessage.toString());
+		}
 
 		GhsLog.fine("Data processing complete.");
 
 		return processingErrors;
 	}
 	
+	private void print(String printMessage) {
+		String printer_ip = export_props.getProperty("printer_ip",true);
+		Integer printer_port = new Integer(export_props.getProperty("printer_port",true));
+		
+		if(printer_ip != null && printer_port != null){
+			try {
+				Printer printer = new Printer(printer_ip,printer_port);
+				printer.print(printMessage);
+			} catch (UnknownHostException e) {
+				GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, host unknown ("+printer_ip+","+printer_port.toString()+").");
+			} catch (IOException e) {
+				GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, IO Exception: " + e.getMessage());
+			}
+		}
+	}
 	private void getDataFromDB() {
 		try {
 			ResultSet exportDataSet = conn.Query(QUERY);
@@ -319,7 +342,7 @@ public class GHSExtract {
 	 */
 	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException {
 		GhsLog.finer("Sending data to Cloverleaf. Full text: " + padZeros(theRecord.length(),6)+theRecord);
-		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord + "\r\n");
+		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord);
 		
 		if(!sock.recvAck()){//no acknowledgment, or acknowledged with incorrect sequence 
 			throw new AcknowledgmentException("No acknowledgement received from Cloverleaf.");
@@ -347,5 +370,13 @@ public class GHSExtract {
 			output.insert(0,0);
 		}
 		return output.toString();
+	}
+	
+	public void close(){
+		if(conn!=null)
+			conn.close();
+		
+		if(sock!=null)
+			sock.close();
 	}
 }

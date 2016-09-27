@@ -8,6 +8,7 @@ package prob.ghs;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 
 import javax.naming.NamingException;
 import javax.ws.rs.GET;
@@ -17,6 +18,7 @@ import javax.ws.rs.core.MediaType;
 
 import prob.ghs.GHSExtract;
 import prob.util.DBConnection;
+import prob.util.Printer;
 import prob.util.Property_Set;
 import prob.util.Encrypt;
 import prob.util.MailServer;
@@ -29,11 +31,11 @@ public class RunExtract {
 	public static String ExportGHS(String type){
 		System.out.println(type.toUpperCase() + " Export starting...");
 		GHSExtract frlFile = null;
-		Property_Set prop = new Property_Set("ghst");
+		Property_Set prop = new Property_Set("ghs");
 		ArrayList<String> errors = null;
 		
 		String driver = prop.getProperty("driver", false);
-		
+
 		try{
 			if(driver==null){
 				frlFile = new GHSExtract(new Property_Set(type),prop.getProperty("url", true));
@@ -72,6 +74,8 @@ public class RunExtract {
 			System.out.println(e.getMessage());
 		}catch(Exception e){
 			System.out.println(e.getClass()+": "+e.getMessage());
+		}finally{
+			frlFile.close();
 		}
 
 		if(errors != null && errors.isEmpty()){
@@ -82,7 +86,7 @@ public class RunExtract {
 		}
 		else{
 			System.out.println("Export terminated abnormally. Please see log for details.");
-			return "";
+			return "Export terminated abnormally. Please see log for details.";
 		}
 	}
 	
@@ -91,7 +95,7 @@ public class RunExtract {
 	@Produces(MediaType.TEXT_PLAIN)
 	public static String resendTestRecords(){
 		DBConnection db = null;
-		Property_Set prop = new Property_Set("ghst");
+		Property_Set prop = new Property_Set("ghs");
 		
 		String driver = prop.getProperty("driver", false);
 		
@@ -105,7 +109,7 @@ public class RunExtract {
 								      prop.getProperty("username",false),
 								      prop.getProperty("password",false));
 			}
-			
+
 			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where export_id >= 10;");
 		} catch (NamingException e) {
 			return e.getClass() + ": " + e.getMessage();

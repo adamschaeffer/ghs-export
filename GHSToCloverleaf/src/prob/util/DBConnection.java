@@ -24,7 +24,7 @@ public class DBConnection implements Closeable {
 	private java.sql.Connection conn;
 	private static final Logger l;
 	private static Handler fh = null;
-	private static final Level logging_level = Level.FINE;
+	private static final Level logging_level = Level.FINEST;
 
 	static{
 		l = Logger.getLogger(DBConnection.class.getName());
