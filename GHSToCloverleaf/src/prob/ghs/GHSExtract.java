@@ -43,9 +43,11 @@ import javax.naming.NamingException;
 
 import com.bea.logging.LogLevel;
 
+import prob.ghs.beans.PrinterBean;
 import prob.ghs.beans.ResponseBean;
 import prob.ghs.beans.SessionBean;
 import prob.ghs.exception.AcknowledgmentException;
+import prob.ghs.exception.SessionMismatchException;
 import prob.ghs.FRLField;
 import prob.pix.pxSocket;
 import prob.util.DBConnection;
@@ -104,8 +106,6 @@ public class GHSExtract {
 	
 	private void initialize(Property_Set props) {
 		export_props = props;
-		
-		printMessage.append(props.getProperty("title",false)).append(" GHS Export Completed. Results as follows:\n\n");
 		
 		StringBuffer t = new StringBuffer("select distinct ");
 		FILE_FORMAT = new ArrayList<FRLField>();
@@ -169,7 +169,11 @@ public class GHSExtract {
 				data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));
 				try{
 					processRow(data);
-					printMessage.append("PDJ # ").append(data.getPDJ()).append(" has finished a survey.\n");
+					printMessage.append("PDJ no.: ")
+					            .append(data.getPDJ())
+					            .append(": A survey has been completed on ")
+					            .append(data.getTimestamp(true))
+					            .append("\n\n");
 				} catch(Exception e){
 					processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
 				}	
@@ -178,9 +182,10 @@ public class GHSExtract {
 			processingErrors.add("Unknown error occured. Details: " + e.getClass() + ": " + e.getMessage());
 		}
 		finally{
+			if(!printMessage.toString().equals(""))
+				printNotice(printMessage.toString());
+
 			closeProcessing();
-			
-			print(printMessage.toString());
 		}
 
 		GhsLog.fine("Data processing complete.");
@@ -188,53 +193,81 @@ public class GHSExtract {
 		return processingErrors;
 	}
 	
-	private void print(String printMessage) {
-		String printer_ip = export_props.getProperty("printer_ip",true);
-		Integer printer_port = new Integer(export_props.getProperty("printer_port",true));
-		
-		if(printer_ip != null && printer_port != null){
-			try {
-				Printer printer = new Printer(printer_ip,printer_port);
-				printer.print(printMessage);
-			} catch (UnknownHostException e) {
-				GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, host unknown ("+printer_ip+","+printer_port.toString()+").");
-			} catch (IOException e) {
-				GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, IO Exception: " + e.getMessage());
-			}
+	private void printNotice(String printMessage) {
+		try {
+			print();
+		} catch (UnknownHostException e) {
+			GhsLog.log(LogLevel.ERROR,e.getMessage());
+		} catch (IOException e) {
+			GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, IO Exception: " + e.getMessage());
+		} catch (SQLException e) {
+			GhsLog.log(LogLevel.ERROR,"Cannot get printer information: " + e.getMessage());
+		} catch (RuntimeException e) {
+			GhsLog.log(LogLevel.ERROR,"Runtime Error: " + e.getMessage());
 		}
 	}
+
+	private void print() throws UnknownHostException, IOException, SQLException, RuntimeException {
+		ArrayList<PrinterBean> printerList = getPrinterList();
+		
+		if(printerList == null)
+			return;
+		
+		for(int i = 0; i < printerList.size(); i++){
+			PrinterBean printerInfo = printerList.get(i);
+			Printer printer = new Printer(printerInfo.host,printerInfo.port);
+			printer.print(printMessage.toString());
+		}
+	}
+	
+	private ArrayList<PrinterBean> getPrinterList() throws SQLException, RuntimeException {
+		ArrayList<PrinterBean> printerList = new ArrayList<PrinterBean>();
+		String theQuery = "SELECT DISTINCT IPADDRESS,PORT FROM GHS_PRINTER WHERE UPPER(DOCTYPE)=UPPER(?) AND IPADDRESS IS NOT NULL;";
+		String docType = export_props.getProperty("DOCTYPE",false);
+		
+		if(docType == null)
+			return null;
+		
+		ResultSet rs = conn.Query(theQuery,docType);
+
+		while(rs.next()){
+			PrinterBean printer = new PrinterBean();
+			printer.host = rs.getString("IPADDRESS");
+			printer.port = rs.getInt("PORT");
+			printerList.add(printer);
+		}
+		
+		return printerList;
+	}
+	
 	private void getDataFromDB() {
 		try {
-			ResultSet exportDataSet = conn.Query(QUERY);
-			loadDataIntoList(exportDataSet);
+			loadDataIntoList();
 		} catch (SQLException e) {
 			throw new RuntimeException("SQL Error: " + e.getMessage(),e);
-		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage(),e);
-		}	
-	}
-	private void loadDataIntoList(ResultSet rs) throws Exception {
-		try{
-			SessionAndResponseData currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
-			currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
-			
-			while(rs.next()){
-				DbRow thisRow = getDbRow(rs);
-				
-				if(!currentSessionData.isSameSession(thisRow.session)){
-					theFile.add(currentSessionData);
-					currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
-					currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
-				}
-
-				currentSessionData.addSessionData(thisRow.session);
-				currentSessionData.addResponseData(thisRow.response);
-			}
-			theFile.add(currentSessionData);
-		}catch(Exception e){
-			GhsLog.severe(e.getClass() + ": " + e.getMessage());
-			throw new RuntimeException(e);
+		} catch(SessionMismatchException e){
+			throw new RuntimeException("Session data doesn't match. GHSExtract.loadDataIntoList(), Line 14.");
 		}
+	}
+	
+	private void loadDataIntoList() throws SQLException, SessionMismatchException {
+		ResultSet rs = conn.Query(QUERY);
+		SessionAndResponseData currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+		currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
+		
+		while(rs.next()){
+			DbRow thisRow = getDbRow(rs);
+			
+			if(!currentSessionData.isSameSession(thisRow.session)){
+				theFile.add(currentSessionData);
+				currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+				currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
+			}
+
+			currentSessionData.addSessionData(thisRow.session);
+			currentSessionData.addResponseData(thisRow.response);
+		}
+		theFile.add(currentSessionData);
 		GhsLog.fine("Query results converted to Array format.");
 	}
 	

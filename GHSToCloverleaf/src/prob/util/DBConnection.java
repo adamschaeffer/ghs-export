@@ -163,8 +163,8 @@ public class DBConnection implements Closeable {
 	 *             Errors in the SQL will result in an SQL Exception.
 	 */
 	public ResultSet Query(String sql,Object...objects) throws SQLException {
-		l.log(Level.SEVERE,sql);
-		PreparedStatement ps = conn.prepareStatement(sql);
+		l.log(Level.FINER,sql);
+		PreparedStatement ps = getStatement(sql,objects);
 		return Query(ps);
 	}
 	/**
@@ -194,7 +194,7 @@ public class DBConnection implements Closeable {
 		
 		return rs;
 	}
-	
+		
 	/**
 	 * Close all objects associated with the DBConnection object
 	 */

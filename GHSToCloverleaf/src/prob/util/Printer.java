@@ -1,30 +1,30 @@
 package prob.util;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class Printer {
 	private Socket printer;
 	private DataOutputStream printerStream;
+	String ipAddress;
+	int port;
 	private static final String ESCAPE = (char)27 + "%-12345X";
-	private BufferedReader reader;
 
 	public Printer(String ipAddress,Integer port) throws UnknownHostException, IOException{
-		printer = new Socket(ipAddress,port);
-		
-		printerStream = new DataOutputStream(printer.getOutputStream());
-//		reader = new BufferedReader(new InputStreamReader(printer.getInputStream()));
+		this.ipAddress = ipAddress;
+		this.port = port;
 	}
 	
 	private void initPrintJob() throws IOException{
+		printer = new Socket(ipAddress,port);
+		printerStream = new DataOutputStream(printer.getOutputStream());
+
 		String cmd = ESCAPE + "@PJL\r\n";
 		printerStream.write(cmd.getBytes());
 		printerStream.flush();
@@ -32,11 +32,10 @@ public class Printer {
 		cmd = "@PJL JOB NAME = \"GHS TEST PRINT\"\r\n";
 		printerStream.write(cmd.getBytes());
 		printerStream.flush();
-//		System.out.println("Printer Response: " + reader.readLine());
 		
 		cmd = "@PJL ENTER LANGUAGE = PCL\r\n";
 		printerStream.write(cmd.getBytes());
-		printerStream.flush();		
+		printerStream.flush();
 	}
 
 	public void print(String msg){
@@ -92,7 +91,7 @@ public class Printer {
 			//String cmd = ESCAPE + "@JPL EOF \r\n";
 			//printerStream.write(cmd.getBytes());
 			
-			//cmd = ESCAPE;
+			//String cmd = ESCAPE;
 			//printerStream.write(cmd.getBytes());
 			try{
 				Thread.sleep(20000);
@@ -102,6 +101,14 @@ public class Printer {
 			printerStream.close();
 		} catch (IOException e) {
 			throw new RuntimeException("Error closing print job.",e);
+		}finally{
+			try{
+				printerStream.close();
+				printer.close();
+			}
+			catch(IOException e){
+				throw new RuntimeException("Cannot close printer connection: "+e.getMessage());
+			}
 		}
 		
 	}

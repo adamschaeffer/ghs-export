@@ -55,6 +55,29 @@ public class SessionAndResponseData {
 	public String getPDJ() {
 		return session.mpdj;
 	}
+	public String getTimestamp(boolean prettyFormat){
+		if(prettyFormat){
+			StringBuilder datetime = new StringBuilder("");
+			
+			datetime.append(session.end_datetime.substring(4,6))
+					.append("/")
+					.append(session.end_datetime.substring(6,8))
+					.append("/")
+					.append(session.end_datetime.substring(0,4))
+					.append(" ")
+					.append(session.end_datetime.substring(8,10))
+					.append(":")
+					.append(session.end_datetime.substring(10,12))
+					.append(":")
+					.append(session.end_datetime.substring(12,14));
+					
+			
+			return datetime.toString();
+		}
+		else{
+			return session.end_datetime;
+		}
+	}
 
 	@Override
 	public String toString(){
