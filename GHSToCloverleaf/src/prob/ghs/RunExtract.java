@@ -16,6 +16,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import java.sql.ResultSet;
+
 import prob.ghs.GHSExtract;
 import prob.util.DBConnection;
 import prob.util.Printer;
@@ -131,6 +133,32 @@ public class RunExtract {
 	}
 
 	public static void main(String args[]){
-		System.out.println(resendTestRecords());
+//		System.out.println(resendTestRecords());
+		DBConnection db = null;
+		Property_Set prop = new Property_Set("ghs_db");
+		
+		String driver = prop.getProperty("driver", false);
+		
+		try{
+			if(driver==null){
+				db = new DBConnection(prop.getProperty("url", true));
+			}
+			else{
+				db = new DBConnection(prop.getProperty("url", true),
+								      prop.getProperty("driver",false),
+								      prop.getProperty("username",false),
+								      prop.getProperty("password",false));
+			}
+
+			ResultSet rs = db.Query("select * from ghs_webapp.domain;");
+			while(rs.next()){
+				System.out.println(rs.getString("subdomain"));
+			}
+		} catch (Exception e) {
+			System.out.println(e.getClass() + ": " + e.getMessage());
+		} finally {
+			if(db!=null)
+				db.close();
+		}
 	}
 }
