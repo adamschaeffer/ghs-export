@@ -8,10 +8,10 @@ package prob.ghs;
  * cloverleaf (as defined in the file ghs.properties). A log is created in GHS_Export_Log.txt, at the level defined by 
  * the variable logLevel.
  * 
- * If there are any changes to the export file, every effort should be made to accommodate the changes through either
- * the QUERY parameter or the FILE_FORMAT parameter. If new files require new types of formatting not currently supported, 
- * new variables can be added to the FRLField class. Then this information can be used within the FormatField() function
- * in order to obtain the desired output. 
+ * If there are any changes to the export file, note that changes to the format of the fields should be made within the
+ * toString() methods of the classes ResponseBean, SessionBean, and SessionAndResponseData. Changes to which fields should
+ * be included can be accomodated with changes to the FILE_FORMAT member variable of this class, as well as changes
+ * to the toString() method of the classes listed above.
  * 
  * Once a record is sent to cloverleaf, and whether a proper acknowledgement is received or not, a call to the function 
  * UpdateRecord() will update the GHS database. Any changes to this process should be limited to the UpdateRecord() 
@@ -27,11 +27,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.FileHandler;
@@ -41,9 +39,6 @@ import java.util.logging.SimpleFormatter;
 
 import javax.naming.NamingException;
 
-import com.bea.logging.LogLevel;
-
-import prob.ghs.beans.PrinterBean;
 import prob.ghs.beans.ResponseBean;
 import prob.ghs.beans.SessionBean;
 import prob.ghs.exception.AcknowledgmentException;
@@ -51,12 +46,13 @@ import prob.ghs.exception.SessionMismatchException;
 import prob.ghs.FRLField;
 import prob.pix.pxSocket;
 import prob.util.DBConnection;
+import prob.util.PrintJob;
 import prob.util.Property_Set;
 import prob.util.Printer;
 
 public class GHSExtract {
 	private static final Logger GhsLog                = Logger.getLogger(GHSExtract.class.getName());
-	private static final Level loglevel               = Level.WARNING;
+	private static final Level loglevel               = Level.FINER;
 	
 	private static final String CUSTOM_MARKER         = "**CUSTOM**"; 
 	
@@ -109,30 +105,28 @@ public class GHSExtract {
 		
 		StringBuffer t = new StringBuffer("select distinct ");
 		FILE_FORMAT = new ArrayList<FRLField>();
-		FILE_FORMAT.add(new FRLField("export_id",true));
-		FILE_FORMAT.add(new FRLField("session_id",11,"R"," "));
-		FILE_FORMAT.add(new FRLField("message_id",19,"R"," "));
-		FILE_FORMAT.add(new FRLField("start_date",8,"R"," "));
-		FILE_FORMAT.add(new FRLField("start_time",6,"R"," "));
-		FILE_FORMAT.add(new FRLField("end_time",6,"R"," "));
-		FILE_FORMAT.add(new FRLField("start_datetime",14,"R"," "));
-		FILE_FORMAT.add(new FRLField("end_datetime",14,"R"," "));
-		FILE_FORMAT.add(new FRLField("facility_id",10,"R"," "));
-		FILE_FORMAT.add(new FRLField("aid",7,"R"," "));
-		FILE_FORMAT.add(new FRLField("oriented",1,"R"," "));
-		FILE_FORMAT.add(new FRLField("mpdj",11,"R"," "));
-		FILE_FORMAT.add(new FRLField("minor_lastname",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("minor_firstname",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("minor_middlename",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("minor_dob",8,"R"," "));
-		FILE_FORMAT.add(new FRLField("admin_lastname",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("admin_firstname",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("admin_middlename",80,"R"," "));
-		FILE_FORMAT.add(new FRLField("question_alias",11,"R"," ",true,false));
-		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"set_id",3,"R"," ",true,true));
-		FILE_FORMAT.add(new FRLField("question_response",200,"R"," ",true,false));
-		FILE_FORMAT.add(new FRLField("question_scale",80,"R"," ",true,false));
-		FILE_FORMAT.add(new FRLField("question",200,"R"," ",true,false));
+		FILE_FORMAT.add(new FRLField("export_id").skipField(true));
+		FILE_FORMAT.add(new FRLField("session_id"));
+		FILE_FORMAT.add(new FRLField("message_id"));
+		FILE_FORMAT.add(new FRLField("start_date"));
+		FILE_FORMAT.add(new FRLField("start_time"));
+		FILE_FORMAT.add(new FRLField("end_time"));
+		FILE_FORMAT.add(new FRLField("start_datetime"));
+		FILE_FORMAT.add(new FRLField("end_datetime"));
+		FILE_FORMAT.add(new FRLField("facility_id"));
+		FILE_FORMAT.add(new FRLField("oriented"));
+		FILE_FORMAT.add(new FRLField("pdj"));
+		FILE_FORMAT.add(new FRLField("minor_name"));
+		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"minor_lastname").skipField(true).isCustom(true));
+		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"minor_middlename").skipField(true).isCustom(true));
+		FILE_FORMAT.add(new FRLField("minor_dob"));
+		FILE_FORMAT.add(new FRLField("admin_name"));
+		FILE_FORMAT.add(new FRLField("question_alias").isLineitem(true));
+		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"set_id").isLineitem(true).isCustom(true));
+		FILE_FORMAT.add(new FRLField("question_response").isLineitem(true));
+		FILE_FORMAT.add(new FRLField("question").isLineitem(true));
+		FILE_FORMAT.add(new FRLField("question_scale").isLineitem(true));
+		FILE_FORMAT.add(new FRLField("question_config").isLineitem(true).skipField(true));
 		
 		for(int i = 0; i < FILE_FORMAT.size(); i++){
 			if(FILE_FORMAT.get(i).field_name.contains(CUSTOM_MARKER))
@@ -146,7 +140,9 @@ public class GHSExtract {
 		
 		QUERY = t.toString() + " from "+export_props.getProperty("viewname",true)+
 							   " where "+export_props.getProperty("ackcol",true)+" is null" +
+				" and session_id=152" +
 							   " order by export_id,question_alias asc;";
+
 		GhsLog.finer("Query initialized: " + QUERY);
 	}
 
@@ -182,8 +178,12 @@ public class GHSExtract {
 			processingErrors.add("Unknown error occured. Details: " + e.getClass() + ": " + e.getMessage());
 		}
 		finally{
-			if(!printMessage.toString().equals(""))
-				printNotice(printMessage.toString());
+			if(!printMessage.toString().equals("")){
+				PrintJob pj = new PrintJob();
+				pj.setMessage(printMessage.toString());
+				pj.addPrinter(getPrinterList());
+				pj.run();
+			}
 
 			closeProcessing();
 		}
@@ -193,53 +193,6 @@ public class GHSExtract {
 		return processingErrors;
 	}
 	
-	private void printNotice(String printMessage) {
-		try {
-			print();
-		} catch (UnknownHostException e) {
-			GhsLog.log(LogLevel.ERROR,e.getMessage());
-		} catch (IOException e) {
-			GhsLog.log(LogLevel.ERROR,"Cannot connect to printer, IO Exception: " + e.getMessage());
-		} catch (SQLException e) {
-			GhsLog.log(LogLevel.ERROR,"Cannot get printer information: " + e.getMessage());
-		} catch (RuntimeException e) {
-			GhsLog.log(LogLevel.ERROR,"Runtime Error: " + e.getMessage());
-		}
-	}
-
-	private void print() throws UnknownHostException, IOException, SQLException, RuntimeException {
-		ArrayList<PrinterBean> printerList = getPrinterList();
-		
-		if(printerList == null)
-			return;
-		
-		for(int i = 0; i < printerList.size(); i++){
-			PrinterBean printerInfo = printerList.get(i);
-			Printer printer = new Printer(printerInfo.host,printerInfo.port);
-			printer.print(printMessage.toString());
-		}
-	}
-	
-	private ArrayList<PrinterBean> getPrinterList() throws SQLException, RuntimeException {
-		ArrayList<PrinterBean> printerList = new ArrayList<PrinterBean>();
-		String theQuery = "SELECT DISTINCT IPADDRESS,PORT FROM GHS_PRINTER WHERE UPPER(DOCTYPE)=UPPER(?) AND IPADDRESS IS NOT NULL;";
-		String docType = export_props.getProperty("DOCTYPE",false);
-		
-		if(docType == null)
-			return null;
-		
-		ResultSet rs = conn.Query(theQuery,docType);
-
-		while(rs.next()){
-			PrinterBean printer = new PrinterBean();
-			printer.host = rs.getString("IPADDRESS");
-			printer.port = rs.getInt("PORT");
-			printerList.add(printer);
-		}
-		
-		return printerList;
-	}
-	
 	private void getDataFromDB() {
 		try {
 			loadDataIntoList();
@@ -247,11 +200,20 @@ public class GHSExtract {
 			throw new RuntimeException("SQL Error: " + e.getMessage(),e);
 		} catch(SessionMismatchException e){
 			throw new RuntimeException("Session data doesn't match. GHSExtract.loadDataIntoList(), Line 14.");
+		} catch(NullPointerException e){
+			throw new RuntimeException("Null pointer exception from loadDataIntoList().");
 		}
 	}
 	
 	private void loadDataIntoList() throws SQLException, SessionMismatchException {
 		ResultSet rs = conn.Query(QUERY);
+		
+		if(!rs.next()){
+			return;
+		}
+		else
+			rs.beforeFirst();
+		
 		SessionAndResponseData currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
 		currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 		
@@ -265,7 +227,7 @@ public class GHSExtract {
 			}
 
 			currentSessionData.addSessionData(thisRow.session);
-			currentSessionData.addResponseData(thisRow.response);
+			currentSessionData.addResponseData(thisRow.response.convertResponse());
 		}
 		theFile.add(currentSessionData);
 		GhsLog.fine("Query results converted to Array format.");
@@ -281,10 +243,12 @@ public class GHSExtract {
 			throw new RuntimeException("Attempting to set a field that does not exist: " + e.getMessage());
 		} catch(IllegalAccessException e){
 			throw new RuntimeException("Illegal access attempt: " + e.getMessage());
+		} catch(NullPointerException e){
+			throw new RuntimeException("Null pointer exception from getRowBeans().");
 		}
 		return row;
 	}
-	
+		
 	private DbRow getRowBeans(ResultSet rs) throws SQLException, NoSuchFieldException, IllegalAccessException{
 		DbRow beans = new DbRow();
 		String FieldToSet;
@@ -310,6 +274,26 @@ public class GHSExtract {
 			
 		}
 		return beans;
+	}
+	
+	private ArrayList<Printer> getPrinterList(){
+		ArrayList<Printer> printerList = new ArrayList<Printer>();
+		String theQuery = "SELECT DISTINCT IPADDRESS,PORT FROM PRINTERS WHERE UPPER(DOCTYPE)=UPPER(?) AND IPADDRESS IS NOT NULL;";
+		String docType = export_props.getProperty("DOCTYPE",false);
+		
+		if(docType == null)
+			return null;
+		try{
+			ResultSet rs = conn.Query(theQuery,docType);
+	
+			while(rs.next()){
+				printerList.add(new Printer(rs.getString("IPADDRESS"),rs.getInt("PORT")));
+			}
+		}catch(SQLException e){
+			throw new RuntimeException("Error getting printer list: " + e.getMessage(),e);
+		}
+		
+		return printerList;
 	}
 
 	private <T> void setValueByName(T objectToSetValueOf, String field_name,String value) 
@@ -361,6 +345,8 @@ public class GHSExtract {
 			throw new RuntimeException("Unable to mark Session ID "+process_row.getSessionID()+" as acknowledged.",e);
 		} catch(NullPointerException e){
 			throw new RuntimeException("Null pointer exception found when converting to FRL format.",e);
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException("Unable to convert UTF-8 string to byte array.",e);
 		}
 		GhsLog.fine("Staging table updated successfully for Export ID " + process_row.getSessionID());
 	}
@@ -371,11 +357,13 @@ public class GHSExtract {
 	 * AcknowledgmentException will be thrown.
 	 * 
 	 * @param theRecord The string record that is already in FRL format and ready to send to cloverleaf.
+	 * @throws UnsupportedEncodingException 
 	 * @throws AcknowledgementException If Cloverleaf does not acknowledge receipt of a record.
 	 */
-	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException {
+	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException, UnsupportedEncodingException {
 		GhsLog.finer("Sending data to Cloverleaf. Full text: " + padZeros(theRecord.length(),6)+theRecord);
-		sock.sendMsg(padZeros(theRecord.length(),6)+theRecord);
+		String exportString = new String(padZeros(theRecord.length(),6)+theRecord);
+		sock.sendMsg(exportString);//.getBytes("utf-8");
 		
 		if(!sock.recvAck()){//no acknowledgment, or acknowledged with incorrect sequence 
 			throw new AcknowledgmentException("No acknowledgement received from Cloverleaf.");

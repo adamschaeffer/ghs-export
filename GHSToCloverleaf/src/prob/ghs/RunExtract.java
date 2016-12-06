@@ -33,7 +33,7 @@ public class RunExtract {
 	public static String ExportGHS(String type){
 		System.out.println(type.toUpperCase() + " Export starting...");
 		GHSExtract frlFile = null;
-		Property_Set prop = new Property_Set("ghs");
+		Property_Set prop = new Property_Set("ghs_db");
 		ArrayList<String> errors = null;
 		
 		String driver = prop.getProperty("driver", false);
@@ -97,44 +97,6 @@ public class RunExtract {
 	@Produces(MediaType.TEXT_PLAIN)
 	public static String resendTestRecords(){
 		DBConnection db = null;
-		Property_Set prop = new Property_Set("ghs");
-		
-		String driver = prop.getProperty("driver", false);
-		
-		try{
-			if(driver==null){
-				db = new DBConnection(prop.getProperty("url", true));
-			}
-			else{
-				db = new DBConnection(prop.getProperty("url", true),
-								      prop.getProperty("driver",false),
-								      prop.getProperty("username",false),
-								      prop.getProperty("password",false));
-			}
-
-			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where export_id >= 10;");
-		} catch (NamingException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} catch (SQLException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} catch (RuntimeException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} finally {
-			if(db!=null)
-				db.close();
-		}
-
-		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
-		rtn.append(ExportGHS("all")).append("<br><br>");
-		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
-		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
-		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
-		return rtn.toString();
-	}
-
-	public static void main(String args[]){
-//		System.out.println(resendTestRecords());
-		DBConnection db = null;
 		Property_Set prop = new Property_Set("ghs_db");
 		
 		String driver = prop.getProperty("driver", false);
@@ -150,15 +112,27 @@ public class RunExtract {
 								      prop.getProperty("password",false));
 			}
 
-			ResultSet rs = db.Query("select * from ghs_webapp.domain;");
-			while(rs.next()){
-				System.out.println(rs.getString("subdomain"));
-			}
-		} catch (Exception e) {
-			System.out.println(e.getClass() + ": " + e.getMessage());
+			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where SID=152;");
+		} catch (NamingException e) {
+			return e.getClass() + ": " + e.getMessage();
+		} catch (SQLException e) {
+			return e.getClass() + ": " + e.getMessage();
+		} catch (RuntimeException e) {
+			return e.getClass() + ": " + e.getMessage();
 		} finally {
 			if(db!=null)
 				db.close();
 		}
+
+		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
+		rtn.append(ExportGHS("all")).append("<br><br>");
+//		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
+//		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
+//		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
+		return rtn.toString();
+	}
+
+	public static void main(String args[]){
+		System.out.println(resendTestRecords());
 	}
 }

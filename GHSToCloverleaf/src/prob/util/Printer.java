@@ -16,7 +16,7 @@ public class Printer {
 	int port;
 	private static final String ESCAPE = (char)27 + "%-12345X";
 
-	public Printer(String ipAddress,Integer port) throws UnknownHostException, IOException{
+	public Printer(String ipAddress,Integer port){
 		this.ipAddress = ipAddress;
 		this.port = port;
 	}
@@ -78,7 +78,6 @@ public class Printer {
 			dataIn.close();
 			bis.close();
 		}
-
 	}
 
 	private void closePrintJob() {
@@ -111,5 +110,9 @@ public class Printer {
 			}
 		}
 		
+	}
+	
+	public Printer clone(){
+		return new Printer(ipAddress,port);
 	}
 }

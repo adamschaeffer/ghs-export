@@ -7,6 +7,8 @@ package prob.pix;
    		- Added SetTimeout function
    		- Added support for the socket failing to receive anything from Cloverleaf.
    		- Added 3-argument constructor
+   Modified December 2016 by A Schaeffer
+   		- Added sendMsg(byte[])
 
    Originally written to replace, in part, the pclibc C program running in the UWIN environment of a Windows server to send PIMS data to Cloverleaf (UWIN will no longer be used by DA).
 
@@ -77,6 +79,18 @@ public class pxSocket{
     catch(IOException ioException) {
       ioException.printStackTrace();
     }
+  }
+  
+  public void sendMsg(byte[] msg){
+	  pxLog.fine("Sending message:\n" + msg);
+	  try{
+		  out.write(msg);
+		  out.flush();
+		  pxLog.fine("Message sent.");
+	  }
+	  catch(IOException e){
+		  e.printStackTrace();
+	  }
   }
 
   public boolean recvAck() {
