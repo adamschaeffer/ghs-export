@@ -140,7 +140,7 @@ public class GHSExtract {
 		
 		QUERY = t.toString() + " from "+export_props.getProperty("viewname",true)+
 							   " where "+export_props.getProperty("ackcol",true)+" is null" +
-				" and session_id=152" +
+//				" and session_id=152" +
 							   " order by export_id,question_alias asc;";
 
 		GhsLog.finer("Query initialized: " + QUERY);
