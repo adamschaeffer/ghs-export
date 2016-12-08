@@ -112,7 +112,16 @@ public class RunExtract {
 								      prop.getProperty("password",false));
 			}
 
-			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null where SID=152;");
+			ArrayList<String> recordsToExport = new ArrayList<String>();
+			recordsToExport.add("152");
+			recordsToExport.add("161");
+			
+			StringBuilder whereClause = new StringBuilder(" where ");
+			for(int i = 0; i < recordsToExport.size(); i++){
+				whereClause.append("session_id=").append(recordsToExport.get(i)).append(" ");
+			}
+			
+			db.Update("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null;");
 		} catch (NamingException e) {
 			return e.getClass() + ": " + e.getMessage();
 		} catch (SQLException e) {
@@ -126,9 +135,9 @@ public class RunExtract {
 
 		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
 		rtn.append(ExportGHS("all")).append("<br><br>");
-//		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
-//		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
-//		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
+		rtn.append("Running Probation export:<br>").append(ExportGHS("prob")).append("<br><br>");
+		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs")).append("<br><br>");
+		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh")).append("<br><br>");
 		return rtn.toString();
 	}
 

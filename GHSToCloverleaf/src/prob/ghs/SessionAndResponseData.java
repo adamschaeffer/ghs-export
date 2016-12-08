@@ -89,20 +89,20 @@ public class SessionAndResponseData {
 		if(format.toLowerCase().equals("expanded")){
 			outputString.append(Format.format(" ",11))
 						.append(Format.format(new Integer(setIdGenerator.next()).toString(),3))
-						.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-						.append(Format.format(" ",80));
+						.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//						.append(Format.format(" ",80));
 			outputString.append(Format.format(" ",11))
 						.append(Format.format(new Integer(setIdGenerator.next()).toString(),3))
-						.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-						.append(Format.format(" ",80));
+						.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//						.append(Format.format(" ",80));
 			outputString.append(Format.format(" ",11))
 						.append(Format.format(new Integer(setIdGenerator.next()).toString(),3))
-						.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-						.append(Format.format(" ",80));
+						.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//						.append(Format.format(" ",80));
 			outputString.append(Format.format(" ",11))
 						.append(Format.format(new Integer(setIdGenerator.next()).toString(),3))
-						.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-						.append(Format.format(" ",80));
+						.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//						.append(Format.format(" ",80));
 		}
 
 		int i = 0;
@@ -121,13 +121,13 @@ public class SessionAndResponseData {
 		for(; i < NUM_QUESTIONS; i++){
 			outputString.append(Format.format(" ",11))
 						.append(Format.format(" ",3))
-						.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-						.append(Format.format(" ",80));
+						.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//						.append(Format.format(" ",80));
 			if(format.toLowerCase().equals("expanded"))
 				outputString.append(Format.format(" ",11))
 							.append(Format.format(" ",3))
-							.append(Format.format(" ",200)) //TODO: RESPONSE LENGTH
-							.append(Format.format(" ",80));
+							.append(Format.format(" ",300)); //TODO: RESPONSE LENGTH
+//							.append(Format.format(" ",80));
 		}
 		return outputString.toString();
 	}

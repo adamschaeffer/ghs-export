@@ -1,5 +1,6 @@
 package prob.ghs.beans;
 
+import java.text.MessageFormat;
 import java.util.HashMap;
 
 import prob.ghs.beans.Format;
@@ -10,6 +11,7 @@ public class ResponseBean {
 	Counter set_id_factory;
 	
 	public String question_alias;
+	public String question_id;
 	public String set_id;
 	public String question_response;
 	public String question;
@@ -32,11 +34,13 @@ public class ResponseBean {
 		StringBuilder sb = new StringBuilder();
 		
 		if(format.toLowerCase().equals("expanded")){
+			String question_prefix = MessageFormat.format("QID: {0} ({1}) ",question_alias,question_id);
+			
 			//Question text
 			sb.append(Format.format(question_alias,11))
 			  .append(Format.format(new Integer(set_id_factory.next()).toString(),3))
-			  .append(Format.format(question,200)) //TODO: RESPONSE LENGTH
-			  .append(Format.format("",80));
+			  .append(Format.format(String.format("%s%s",question_prefix,question),300)); //TODO: RESPONSE LENGTH
+//			  .append(Format.format("",80));
 			}
 		
 		String scale_prefix = "";
@@ -47,8 +51,8 @@ public class ResponseBean {
 		//Question response
 		sb.append(Format.format(question_alias,11))
 		  .append(Format.format(new Integer(set_id_factory.next()).toString(),3))
-		  .append(Format.format(scale_prefix + question_response,200))//TODO: RESPONSE LENGTH
-		  .append(Format.format("",80));
+		  .append(Format.format(scale_prefix + question_response,300));//TODO: RESPONSE LENGTH
+//		  .append(Format.format("",80));
 		
 		return sb.toString();
 	}

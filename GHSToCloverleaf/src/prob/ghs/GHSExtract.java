@@ -122,6 +122,7 @@ public class GHSExtract {
 		FILE_FORMAT.add(new FRLField("minor_dob"));
 		FILE_FORMAT.add(new FRLField("admin_name"));
 		FILE_FORMAT.add(new FRLField("question_alias").isLineitem(true));
+		FILE_FORMAT.add(new FRLField("question_id").isLineitem(true));
 		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"set_id").isLineitem(true).isCustom(true));
 		FILE_FORMAT.add(new FRLField("question_response").isLineitem(true));
 		FILE_FORMAT.add(new FRLField("question").isLineitem(true));
@@ -140,7 +141,6 @@ public class GHSExtract {
 		
 		QUERY = t.toString() + " from "+export_props.getProperty("viewname",true)+
 							   " where "+export_props.getProperty("ackcol",true)+" is null" +
-//				" and session_id=152" +
 							   " order by export_id,question_alias asc;";
 
 		GhsLog.finer("Query initialized: " + QUERY);
