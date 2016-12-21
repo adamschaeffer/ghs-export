@@ -22,25 +22,7 @@ import javax.sql.DataSource;
  */
 public class DBConnection implements Closeable {
 	private java.sql.Connection conn;
-	private static final Logger l;
-	private static Handler fh = null;
-	private static final Level logging_level = Level.FINEST;
-
-	static{
-		l = Logger.getLogger(DBConnection.class.getName());
-		try {
-			fh = new FileHandler("GHS_Import_Connection.log");
-			fh.setLevel(logging_level);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		SimpleFormatter formatter = new SimpleFormatter();
-        fh.setFormatter(formatter);
-		l.addHandler(fh);
-		l.setLevel(logging_level);
-	}
+	private Logger l;
 	
 	/**
 	 * Creates an internal Connection object from a data source named by the parameter.
@@ -51,7 +33,8 @@ public class DBConnection implements Closeable {
 	 *             exceptions thrown by creating the connection object will be 
 	 *             thrown back to the calling function.
 	 */
-	public DBConnection(String jndi_name) throws NamingException, SQLException {
+	public DBConnection(String jndi_name,Logger l) throws NamingException, SQLException {
+		this.l = l;
 		l.log(Level.FINER,"Attempting DB Connection to " + jndi_name);
 		try{
 			conn = ((DataSource) new InitialContext().lookup(jndi_name)).getConnection();
@@ -66,7 +49,7 @@ public class DBConnection implements Closeable {
 		}
 		l.log(Level.FINE,"DB Connection Successful.");
 	}
-	
+
 	/**
 	 * Create an internal Connection object from a URI and driver
 	 * 
@@ -75,8 +58,8 @@ public class DBConnection implements Closeable {
 	 * 
 	 * @throws RuntimeException if there are issues loading the driver or connecting to the database. 
 	 */
-	public DBConnection(String uri,String driver){
-		this(uri,driver,null,null);
+	public DBConnection(String uri,String driver,Logger l){
+		this(uri,driver,null,null,l);
 	}
 
 	/**
@@ -88,7 +71,8 @@ public class DBConnection implements Closeable {
 	 * 
 	 * @throws RuntimeException if there are issues loading the driver or connecting to the database. 
 	 */
-	public DBConnection(String uri,String driver,String username,String password){
+	public DBConnection(String uri,String driver,String username,String password,Logger l){
+		this.l = l;
 		l.log(Level.FINER,"Attempting DB Connection...");
 		try {
 			Class.forName(driver);
@@ -163,7 +147,6 @@ public class DBConnection implements Closeable {
 	 *             Errors in the SQL will result in an SQL Exception.
 	 */
 	public ResultSet Query(String sql,Object...objects) throws SQLException {
-		l.log(Level.FINER,sql);
 		PreparedStatement ps = getStatement(sql,objects);
 		return Query(ps);
 	}
@@ -204,10 +187,6 @@ public class DBConnection implements Closeable {
 		}
 		catch(SQLException e){
 			l.log(Level.SEVERE,"Error closing DB connection: " + e.getMessage());
-		}
-		Handler[] f = l.getHandlers();
-		for(int i = 0; i < f.length; i++){
-			f[i].close();
 		}
 	}
 }

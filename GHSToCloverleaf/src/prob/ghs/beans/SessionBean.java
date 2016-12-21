@@ -6,8 +6,14 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
 
 import prob.ghs.beans.Format;
+import prob.ghs.soap.SoapClient;
 import sun.misc.BASE64Encoder;
 
 public class SessionBean {
@@ -29,54 +35,14 @@ public class SessionBean {
 	public String minor_lastname;
 	public String minor_dob;
 	public String admin_name;
+	public String admin_firstname;
+	public String admin_lastname;
 
 	public SessionBean(){}
 
 	@Override
 	public String toString(){
-		
-		//get minor first, middle, last name:
-		try {
-			URL url = new URL("http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setRequestMethod("GET");
-			conn.setRequestProperty("Accept","application/json");
-			String authStr = "dhs:ghs123";
-			String authStrEnc = new BASE64Encoder().encode(authStr.getBytes("UTF-8")); 
-			conn.setRequestProperty("Authorization",String.format("Basic %s",authStrEnc));
-
-			if(conn.getResponseCode() != 200){
-				throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
-			}
-			
-			BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-			String output;
-			String fname_seq = "\"FIRST_NAME\": \"";
-			String mname_seq = "\"MIDDLE_NAME\": \"";
-			String lname_seq = "\"LAST_NAME\": \"";
-			
-			while((output = br.readLine()) != null){
-				if(output.indexOf(fname_seq)!=-1){
-					int pos_start = output.indexOf(fname_seq)+fname_seq.length();
-					int pos_end = output.lastIndexOf('"');
-					minor_firstname = output.substring(pos_start,pos_end);
-				}
-				else if(output.indexOf(mname_seq)!=-1){
-					int pos_start = output.indexOf(mname_seq)+mname_seq.length();
-					int pos_end = output.lastIndexOf('"');
-					minor_middlename = output.substring(pos_start,pos_end);
-				} 
-				else if(output.indexOf(lname_seq)!=-1){
-					int pos_start = output.indexOf(lname_seq)+lname_seq.length();
-					int pos_end = output.lastIndexOf('"');
-					minor_lastname = output.substring(pos_start,pos_end);
-				} 
-			}
-		} catch (MalformedURLException e) {
-			throw new RuntimeException("Error obtaining minor's name: Malformed URL: " + "http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
-		} catch (IOException e) {
-			throw new RuntimeException("Error obtaining minor's name: " + e.getMessage());
-		}
+		PopulateNames();
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(Format.format(session_id,11))
@@ -94,8 +60,8 @@ public class SessionBean {
 		  .append(Format.format(minor_firstname,80))
 		  .append(Format.format(minor_middlename,80))
 		  .append(Format.format(minor_dob,8))
-		  .append(Format.format(admin_name,80))
-		  .append(Format.format("",80))//afirst
+		  .append(Format.format(admin_lastname,80))
+		  .append(Format.format(admin_firstname,80))
 		  .append(Format.format("",80));//amiddle
 		return sb.toString();
 	}
@@ -110,7 +76,10 @@ public class SessionBean {
 			return false;
 		}
 		
-		return session_id.equals(sessionTestObject.session_id) &&
+		PopulateNames();
+		boolean rtn = false;
+		
+		rtn = session_id.equals(sessionTestObject.session_id) &&
 			   message_id.equals(sessionTestObject.message_id) && 
 			   start_date.equals(sessionTestObject.start_date) && 
 			   start_time.equals(sessionTestObject.start_time) && 
@@ -120,7 +89,73 @@ public class SessionBean {
 			   oriented.equals(sessionTestObject.oriented) && 
 			   pdj.equals(sessionTestObject.pdj) && 
 			   minor_name.equals(sessionTestObject.minor_name) && 
-			   minor_dob.equals(sessionTestObject.minor_dob) && 
-			   admin_name.equals(sessionTestObject.admin_name);
+			   minor_dob.equals(sessionTestObject.minor_dob);
+		
+		return rtn;
+	}
+	
+	private void PopulateNames() {
+		if(minor_lastname==null)
+			getMinorName();
+		
+		if(admin_lastname==null)
+			getAdminName();
+	}
+
+	private void getMinorName(){
+		//get minor first, middle, last name:
+		try {
+			getMinorNameFromWebservice();
+		} catch (MalformedURLException e) {
+			throw new RuntimeException("Error obtaining minor's name: Malformed URL: " + "http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
+		} catch (IOException e) {
+			throw new RuntimeException("Error obtaining minor's name: " + e.getMessage());
+		}
+	}
+	private void getMinorNameFromWebservice() throws IOException{
+		URL url = new URL("http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		conn.setRequestMethod("GET");
+		conn.setRequestProperty("Accept","application/json");
+		String authStr = "dhs:ghs123";
+		String authStrEnc = new BASE64Encoder().encode(authStr.getBytes("UTF-8")); 
+		conn.setRequestProperty("Authorization",String.format("Basic %s",authStrEnc));
+
+		if(conn.getResponseCode() != 200){
+			throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
+		}
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+		String output;
+		String fname_seq = "\"FIRST_NAME\": \"";
+		String mname_seq = "\"MIDDLE_NAME\": \"";
+		String lname_seq = "\"LAST_NAME\": \"";
+		
+		while((output = br.readLine()) != null){
+			if(output.indexOf(fname_seq)!=-1){
+				int pos_start = output.indexOf(fname_seq)+fname_seq.length();
+				int pos_end = output.lastIndexOf('"');
+				minor_firstname = output.substring(pos_start,pos_end);
+			}
+			else if(output.indexOf(mname_seq)!=-1){
+				int pos_start = output.indexOf(mname_seq)+mname_seq.length();
+				int pos_end = output.lastIndexOf('"');
+				minor_middlename = output.substring(pos_start,pos_end);
+			} 
+			else if(output.indexOf(lname_seq)!=-1){
+				int pos_start = output.indexOf(lname_seq)+lname_seq.length();
+				int pos_end = output.lastIndexOf('"');
+				minor_lastname = output.substring(pos_start,pos_end);
+			} 
+		}
+	}
+	
+	private void getAdminName(){
+		Map<String, String> name = SoapClient.getNameFromID(aid);
+		if(name != null){
+			admin_firstname = name.get("firstName");
+			admin_lastname = name.get("lastName");
+			
+		}
 	}
 }

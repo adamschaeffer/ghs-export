@@ -20,7 +20,7 @@ public class MailServer {
 	public MailServer(){
 		props = System.getProperties();
 		props.setProperty("java.net.preferIPv4Stack","true");
-		props.setProperty("mail.smtp.starttls.enable","true");
+//		props.setProperty("mail.smtp.starttls.enable","true");
 		props.setProperty("mail.transport.protocol","smtp");
 
 	}
@@ -49,20 +49,20 @@ public class MailServer {
 	
 	//internal functions
 	private Session getSession(){
-		if(session!=null) 
+		if(session!= null) 
 			return session;
 		else if(props.getProperty("mail.smtp.auth")=="true"){
-			session = Session.getDefaultInstance(props,new Authenticator(){ protected PasswordAuthentication getPasswordAuthentication(){
+			session = Session.getInstance(props,new Authenticator(){ protected PasswordAuthentication getPasswordAuthentication(){
 				return new PasswordAuthentication("adam.schaeffer@probation.lacounty.gov",Encrypt.decrypt(password));
 				}
 			});
 		}
 		else
-			session = Session.getDefaultInstance(props);
+			session = Session.getInstance(props);
 		
 		return session;
 	}
-	
+
 	//public functions
 	public void SendMsg(String from,String to,String subject,String body){
 		try{
@@ -73,7 +73,9 @@ public class MailServer {
 			message.setText(body);
 			Transport.send(message);
 		} catch(MessagingException e){
-			throw new RuntimeException("Error sending email: " + e.getMessage());
+			throw new RuntimeException("Error sending email: " + e.getClass() + ": " + e.getMessage());
+		} catch(Exception e){
+			throw new RuntimeException("Error sending email(2): " + e.getClass() + ": " + e.getMessage());
 		}
 	}
 }

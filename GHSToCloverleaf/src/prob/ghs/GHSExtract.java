@@ -33,6 +33,7 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -51,8 +52,7 @@ import prob.util.Property_Set;
 import prob.util.Printer;
 
 public class GHSExtract {
-	private static final Logger GhsLog                = Logger.getLogger(GHSExtract.class.getName());
-	private static final Level loglevel               = Level.FINER;
+	private Logger GhsLog;
 	
 	private static final String CUSTOM_MARKER         = "**CUSTOM**"; 
 	
@@ -76,27 +76,14 @@ public class GHSExtract {
 		}
 	}
 
-	static{
-		GhsLog.setLevel(loglevel);
-		FileHandler h = null;
-			try {
-				h = new FileHandler("GHS_Export_Log.txt");
-				h.setLevel(loglevel);
-				h.setFormatter(new SimpleFormatter());
-			} catch (SecurityException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			GhsLog.addHandler(h);
-	}
-
-	public GHSExtract(Property_Set props,String jndi_name) throws NamingException, SQLException {
-		conn = new DBConnection(jndi_name);
+	public GHSExtract(Property_Set props,String jndi_name,Logger l) throws NamingException, SQLException {
+		GhsLog = l;
+		conn = new DBConnection(jndi_name,GhsLog);
 		initialize(props);
 	}
-	public GHSExtract(Property_Set props,String host,String driver,String username,String password){
-		conn = new DBConnection(host,driver,username,password);
+	public GHSExtract(Property_Set props,String host,String driver,String username,String password,Logger l){
+		GhsLog = l;
+		conn = new DBConnection(host,driver,username,password,GhsLog);
 		initialize(props);
 	}
 	
@@ -120,6 +107,7 @@ public class GHSExtract {
 		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"minor_lastname").skipField(true).isCustom(true));
 		FILE_FORMAT.add(new FRLField(CUSTOM_MARKER+"minor_middlename").skipField(true).isCustom(true));
 		FILE_FORMAT.add(new FRLField("minor_dob"));
+		FILE_FORMAT.add(new FRLField("aid"));
 		FILE_FORMAT.add(new FRLField("admin_name"));
 		FILE_FORMAT.add(new FRLField("question_alias").isLineitem(true));
 		FILE_FORMAT.add(new FRLField("question_id").isLineitem(true));
@@ -128,7 +116,7 @@ public class GHSExtract {
 		FILE_FORMAT.add(new FRLField("question").isLineitem(true));
 		FILE_FORMAT.add(new FRLField("question_scale").isLineitem(true));
 		FILE_FORMAT.add(new FRLField("question_config").isLineitem(true).skipField(true));
-		
+
 		for(int i = 0; i < FILE_FORMAT.size(); i++){
 			if(FILE_FORMAT.get(i).field_name.contains(CUSTOM_MARKER))
 				continue;
@@ -143,20 +131,30 @@ public class GHSExtract {
 							   " where "+export_props.getProperty("ackcol",true)+" is null" +
 							   " order by export_id,question_alias asc;";
 
-		GhsLog.finer("Query initialized: " + QUERY);
+		GhsLog.log(Level.FINER,"{0}: Query initialized: " + QUERY,export_props.getProperty("title",true).toUpperCase());
 	}
 
 	public ArrayList<String> ProcessData(){
-		getDataFromDB();
+		ArrayList<String> processingErrors = new ArrayList<String>();
+
+		GhsLog.log(Level.FINE,"{0}: Export started.",export_props.getProperty("title",true).toUpperCase());
+		try{
+			getDataFromDB();
+		}
+		catch(Exception e){
+			processingErrors.add("Unable to get data from database: " + e.getMessage());
+			GhsLog.log(Level.SEVERE,"{0}: Unable to get data from database: {1}",new Object[]{export_props.getProperty("title",true).toUpperCase(),e.getMessage()});
+			return processingErrors;
+		}
 		
 		if(theFile.isEmpty()){
-			GhsLog.fine("No records to export.");
-			return new ArrayList<String>();
+			GhsLog.log(Level.FINE,"{0}: No records to export.",export_props.getProperty("title",true).toUpperCase());
+			close();
+			return null;
 		}
 
-		GhsLog.fine("Query completed. Processing data beginning.");
+		GhsLog.log(Level.FINE,"{0}: Query completed. Processing data beginning.",export_props.getProperty("title",true).toUpperCase());
 
-		ArrayList<String> processingErrors = new ArrayList<String>();
 		initializeProcessing();
 		try{
 			Iterator<SessionAndResponseData> iterator = theFile.iterator();
@@ -172,7 +170,7 @@ public class GHSExtract {
 					            .append("\n\n");
 				} catch(Exception e){
 					processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
-				}	
+				}
 			}
 		} catch(Exception e){
 			processingErrors.add("Unknown error occured. Details: " + e.getClass() + ": " + e.getMessage());
@@ -184,11 +182,10 @@ public class GHSExtract {
 				pj.addPrinter(getPrinterList());
 				pj.run();
 			}
-
-			closeProcessing();
+			close();
 		}
 
-		GhsLog.fine("Data processing complete.");
+		GhsLog.log(Level.FINE,"{0}: Data processing complete.",export_props.getProperty("title",true).toUpperCase());
 
 		return processingErrors;
 	}
@@ -208,6 +205,11 @@ public class GHSExtract {
 	private void loadDataIntoList() throws SQLException, SessionMismatchException {
 		ResultSet rs = conn.Query(QUERY);
 		
+		if(rs==null){
+			GhsLog.log(Level.SEVERE,"{0}: Unable to get data from database.",export_props.getProperty("title",true).toUpperCase());
+			return;
+		}
+		
 		if(!rs.next()){
 			return;
 		}
@@ -218,14 +220,15 @@ public class GHSExtract {
 		currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 		
 		while(rs.next()){
-			DbRow thisRow = getDbRow(rs);
-			
+			DbRow thisRow = null;
+			thisRow = getDbRow(rs);
+				
 			if(!currentSessionData.isSameSession(thisRow.session)){
-				theFile.add(currentSessionData);
-				currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
-				currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
+					theFile.add(currentSessionData);
+					currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+					currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 			}
-
+		
 			currentSessionData.addSessionData(thisRow.session);
 			currentSessionData.addResponseData(thisRow.response.convertResponse());
 		}
@@ -325,12 +328,7 @@ public class GHSExtract {
 			throw e;
 		}
 	}
-	
-	private void closeProcessing(){
-		sock.close();
-		conn.close();
-	}
-	
+			
 	private void processRow(SessionAndResponseData process_row) throws SQLException{
 		try {
 			sendToCloverleaf(process_row.toString());
@@ -348,7 +346,7 @@ public class GHSExtract {
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to convert UTF-8 string to byte array.",e);
 		}
-		GhsLog.fine("Staging table updated successfully for Export ID " + process_row.getSessionID());
+		GhsLog.fine("Staging table updated successfully for Export ID " + process_row.getExportID());
 	}
 
 	/**
