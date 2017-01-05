@@ -224,9 +224,9 @@ public class GHSExtract {
 			thisRow = getDbRow(rs);
 				
 			if(!currentSessionData.isSameSession(thisRow.session)){
-					theFile.add(currentSessionData);
-					currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
-					currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
+				theFile.add(currentSessionData);
+				currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
+				currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 			}
 		
 			currentSessionData.addSessionData(thisRow.session);
@@ -235,7 +235,7 @@ public class GHSExtract {
 		theFile.add(currentSessionData);
 		GhsLog.fine("Query results converted to Array format.");
 	}
-	
+
 	private DbRow getDbRow(ResultSet rs){
 		DbRow row = null;
 		try{

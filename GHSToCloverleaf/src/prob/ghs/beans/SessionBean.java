@@ -17,6 +17,8 @@ import prob.ghs.soap.SoapClient;
 import sun.misc.BASE64Encoder;
 
 public class SessionBean {
+	public static final String minorInfoServiceUrl = "http://probwebtest001:96/WebAPI/pcms/dhs/GHS/GetDob/";
+	
 	public String export_id;
 	public String session_id;
 	public String message_id;
@@ -107,13 +109,13 @@ public class SessionBean {
 		try {
 			getMinorNameFromWebservice();
 		} catch (MalformedURLException e) {
-			throw new RuntimeException("Error obtaining minor's name: Malformed URL: " + "http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
+			throw new RuntimeException("Error obtaining minor's name: Malformed URL: " + minorInfoServiceUrl + pdj);
 		} catch (IOException e) {
 			throw new RuntimeException("Error obtaining minor's name: " + e.getMessage());
 		}
 	}
 	private void getMinorNameFromWebservice() throws IOException{
-		URL url = new URL("http://10.120.97.244/webapi/pcms/dhs/ghs/GetDob/"+pdj);
+		URL url = new URL(minorInfoServiceUrl+pdj);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 		conn.setRequestMethod("GET");
 		conn.setRequestProperty("Accept","application/json");

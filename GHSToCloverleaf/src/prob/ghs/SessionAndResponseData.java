@@ -19,7 +19,7 @@ public class SessionAndResponseData {
 	private List<ResponseBean> responses = new ArrayList<ResponseBean>();
 	private HashMap<String,String> customValues = new HashMap<String,String>();
 	private Counter setIdGenerator = new Counter(1);
-	
+
 	SessionAndResponseData(){}
 	SessionAndResponseData(int numQuestions){
 		NUM_QUESTIONS = numQuestions;
