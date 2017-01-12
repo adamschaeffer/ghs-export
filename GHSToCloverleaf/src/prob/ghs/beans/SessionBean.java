@@ -114,6 +114,7 @@ public class SessionBean {
 			throw new RuntimeException("Error obtaining minor's name: " + e.getMessage());
 		}
 	}
+	
 	private void getMinorNameFromWebservice() throws IOException{
 		URL url = new URL(minorInfoServiceUrl+pdj);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();

@@ -61,7 +61,7 @@ public class RunExtract {
 			}
 			l.log(Level.FINEST,"{0}: Starting processing.",type);
 			errors = frlFile.ProcessData();
-			
+
 			if(errors == null){
 				l.log(Level.FINE,"{0}: No data to export.",type);
 				return "No data to export.";
