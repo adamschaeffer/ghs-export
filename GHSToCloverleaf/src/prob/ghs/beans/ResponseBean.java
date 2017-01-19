@@ -51,7 +51,7 @@ public class ResponseBean {
 		//Question response
 		sb.append(Format.format(question_alias,11))
 		  .append(Format.format(new Integer(set_id_factory.next()).toString(),3))
-		  .append(Format.format(scale_prefix + question_response,300));//TODO: RESPONSE LENGTH
+		  .append(Format.format(scale_prefix + question_response.replaceAll(java.util.regex.Matcher.quoteReplacement("\r\n")," "),300));//TODO: RESPONSE LENGTH
 //		  .append(Format.format("",80));
 		
 		return sb.toString();

@@ -7,6 +7,7 @@ package prob.ghs;
  */
 
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.logging.FileHandler;
@@ -23,6 +24,7 @@ import javax.ws.rs.core.MediaType;
 import java.text.MessageFormat;
 
 import prob.ghs.GHSExtract;
+import prob.pix.pxClient;
 import prob.util.DBConnection;
 import prob.util.Property_Set;
 import prob.util.Encrypt;
@@ -30,11 +32,108 @@ import prob.util.MailServer;
 
 @Path("/")
 public class RunExtract {
-	private static Logger l;
-		
-	@Path("Export")
+	private static Logger l = Logger.getLogger(RunExtract.class.getName());
+	
+	@Path("Test")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
+	public static String HelloWorld(){
+		return "Hello, World!";
+	}
+	
+	@Path("Send174")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public static String resend174_all(){
+		String rtn = "Error";
+		try{
+			rtn = resend_test(new int[] {174},new String[] {"all"});
+		}
+		catch(Exception e){
+			return rtn;
+		}
+		return rtn;
+	}
+	@Path("Send152")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public static String resend152_all(){
+		String rtn = "Error";
+		try{
+			rtn = resend_test(new int[] {152},new String[] {"all"});
+		}
+		catch(Exception e){
+			return rtn;
+		}
+		return rtn;
+	}
+	@Path("Send152and174")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public static String resend152and174_all(){
+		String rtn = "Error";
+		try{
+			rtn = resend_test(new int[] {174,152},new String[] {"all"});
+		}
+		catch(Exception e){
+			return rtn;
+		}
+		return rtn;
+	}
+	
+	public static String resend_test(int[] recordsToSend,String[] typesToSend){
+		DBConnection db = null;
+		Property_Set prop = new Property_Set("ghs_db");
+		
+		String driver = prop.getProperty("driver", false);
+		
+		try{
+			if(driver==null){
+				db = new DBConnection(prop.getProperty("url", true),l);
+			}
+			else{
+				db = new DBConnection(prop.getProperty("url", true),
+								      prop.getProperty("driver",false),
+								      prop.getProperty("username",false),
+								      prop.getProperty("password",false),l);
+			}
+
+			StringBuilder whereClause = new StringBuilder(" where ");
+			for(int i = 0; i < recordsToSend.length; i++){
+				whereClause.append("sid=").append(recordsToSend[i]);
+				
+				if(i != recordsToSend.length-1){
+					whereClause.append(" or ");
+				}
+			}
+			
+			StringBuilder setClause = new StringBuilder();
+			for(int i = 0; i < typesToSend.length; i++){
+				if(typesToSend[i] == "all"){
+					setClause.append("ack_all=null");
+				}
+				
+				if(i!=typesToSend.length-1){
+					whereClause.append(',');
+				}
+			}
+			
+			String query = MessageFormat.format("update staging set "+setClause.toString()+"{0};",whereClause.toString());
+			
+			db.Update(query);
+		} catch (NamingException e) {
+			return e.getClass() + ": " + e.getMessage();
+		} catch (SQLException e) {
+			return e.getClass() + ": " + e.getMessage();
+		} catch (RuntimeException e) {
+			return e.getClass() + ": " + e.getMessage();
+		} finally {
+			if(db!=null)
+				db.close();
+		}
+		return "Success";
+	}
+
 	public static String ExportGHS(String type,Logger log){
 		l = log;
 		
@@ -130,9 +229,6 @@ public class RunExtract {
 		}
 	}
 	
-	@Path("SendTest")
-	@GET
-	@Produces(MediaType.TEXT_PLAIN)
 	public static String resendTestRecords(){
 		Logger l = Logger.getLogger(DBConnection.class.getName());
 		FileHandler fh = null;
@@ -182,7 +278,7 @@ public class RunExtract {
 			
 			String query = MessageFormat.format("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null{0};",whereClause.toString());
 			
-			db.Update(query);
+			//db.Update(query);
 		} catch (NamingException e) {
 			return e.getClass() + ": " + e.getMessage();
 		} catch (SQLException e) {
@@ -206,11 +302,13 @@ public class RunExtract {
 //		System.out.println(ExportGHS("all"));
 		
 		
-		System.out.println(resendTestRecords());
+//		System.out.println(resendTestRecords());
 		
+//		resend174_all();
 		
 //		System.out.println("Calling web service...");
 //		SoapClient.getNameFromID("e613467");
 //		System.out.println("Fin");
+
 	}
 }
