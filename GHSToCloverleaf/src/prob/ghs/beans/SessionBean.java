@@ -45,7 +45,7 @@ public class SessionBean {
 	@Override
 	public String toString(){
 		PopulateNames();
-		
+
 		StringBuilder sb = new StringBuilder();
 		sb.append(Format.format(session_id,11))
 		  .append(Format.format(message_id,19))
@@ -55,9 +55,9 @@ public class SessionBean {
 		  .append(Format.format(start_datetime,14))
 		  .append(Format.format(end_datetime,14))
 		  .append(Format.format(facility_id,10))
-		  .append(Format.format("",7)) //aid
+		  .append(Format.format(aid,7)) 
 		  .append(Format.format(oriented,1))
-		  .append(Format.format(pdj,11))
+		  .append(Format.format(pdj.substring(1),11))
 		  .append(Format.format(minor_lastname,80))
 		  .append(Format.format(minor_firstname,80))
 		  .append(Format.format(minor_middlename,80))

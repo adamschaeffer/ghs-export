@@ -61,7 +61,7 @@ public class GHSExtract {
 	private pxSocket sock                             = null;
 	private Property_Set export_props                 = null;
 	private DBConnection conn                         = null;
-	private StringBuilder printMessage                = new StringBuilder("");
+	private ArrayList<StringBuilder> printMessage     = new ArrayList<StringBuilder>();
 	private ArrayList<SessionAndResponseData> theFile = new ArrayList<SessionAndResponseData>();
 
 	private SimpleDateFormat datetime_format          = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -160,14 +160,14 @@ public class GHSExtract {
 			Iterator<SessionAndResponseData> iterator = theFile.iterator();
 			while(iterator.hasNext()){
 				SessionAndResponseData data = iterator.next();
-				data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));
+				data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));//substring will convert probation to prob. dhs and 3-character titles will remain 3 characters.
 				try{
 					processRow(data);
-					printMessage.append("PDJ no.: ")
-					            .append(data.getPDJ())
-					            .append(": A survey has been completed on ")
-					            .append(data.getTimestamp(true))
-					            .append("\n\n");
+					printMessage.add(new StringBuilder("PDJ no.: ")
+					            		.append(data.getPDJ())
+					            		.append(": A survey has been completed on ")
+					            		.append(data.getTimestamp(true))
+					            		.append("\n\n"));
 				} catch(Exception e){
 					processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
 				}
@@ -176,11 +176,14 @@ public class GHSExtract {
 			processingErrors.add("Unknown error occured. Details: " + e.getClass() + ": " + e.getMessage());
 		}
 		finally{
-			if(!printMessage.toString().equals("")){
-				PrintJob pj = new PrintJob();
-				pj.setMessage(printMessage.toString());
-				pj.addPrinter(getPrinterList());
-				pj.run();
+			if(!printMessage.isEmpty()){
+				ArrayList<Printer> printerList = getPrinterList();
+				for(int i = 0; i < printMessage.size(); i++){
+					PrintJob pj = new PrintJob();
+					pj.setMessage(printMessage.get(i).toString());
+					pj.addPrinter(printerList);
+					pj.run();
+				}
 			}
 			close();
 		}
@@ -201,7 +204,7 @@ public class GHSExtract {
 			throw new RuntimeException("Null pointer exception from loadDataIntoList().");
 		}
 	}
-	
+
 	private void loadDataIntoList() throws SQLException, SessionMismatchException {
 		ResultSet rs = conn.Query(QUERY);
 		
@@ -215,16 +218,19 @@ public class GHSExtract {
 		}
 		else
 			rs.beforeFirst();
-		
+
 		SessionAndResponseData currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
 		currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 		
 		while(rs.next()){
 			DbRow thisRow = null;
 			thisRow = getDbRow(rs);
-				
+
 			if(!currentSessionData.isSameSession(thisRow.session)){
 				theFile.add(currentSessionData);
+				if(export_props.getProperty("doctype",true).toLowerCase().equals("all")){
+					currentSessionData.normalizeResponses();
+				}
 				currentSessionData = new SessionAndResponseData(new Integer(export_props.getProperty("numquestions",false)));
 				currentSessionData.setCustomValue("format",export_props.getProperty("format",false));
 			}
@@ -232,7 +238,12 @@ public class GHSExtract {
 			currentSessionData.addSessionData(thisRow.session);
 			currentSessionData.addResponseData(thisRow.response.convertResponse());
 		}
+		if(export_props.getProperty("doctype",true).toLowerCase().equals("all")){
+			currentSessionData.normalizeResponses();
+		}
 		theFile.add(currentSessionData);
+		
+		
 		GhsLog.fine("Query results converted to Array format.");
 	}
 
@@ -251,15 +262,22 @@ public class GHSExtract {
 		}
 		return row;
 	}
-		
+
 	private DbRow getRowBeans(ResultSet rs) throws SQLException, NoSuchFieldException, IllegalAccessException{
+		String lineitemExists = "yes";
 		DbRow beans = new DbRow();
 		String FieldToSet;
 		String ValueToSet;
+
+		if(rs.getString("question_id") == null){
+			lineitemExists = "no";
+		}
 		
-		Iterator<FRLField> iterator = FILE_FORMAT.iterator();
-		while(iterator.hasNext()){
-			FRLField thisField = iterator.next();
+		setValueByName(beans.response,"exists",lineitemExists);
+
+		Iterator<FRLField> fieldIterator = FILE_FORMAT.iterator();
+		while(fieldIterator.hasNext()){
+			FRLField thisField = fieldIterator.next();
 			
 			if(thisField.field_name.contains(CUSTOM_MARKER))
 				continue;
@@ -278,7 +296,7 @@ public class GHSExtract {
 		}
 		return beans;
 	}
-	
+
 	private ArrayList<Printer> getPrinterList(){
 		ArrayList<Printer> printerList = new ArrayList<Printer>();
 		String theQuery = "SELECT DISTINCT IPADDRESS,PORT FROM PRINTERS WHERE UPPER(DOCTYPE)=UPPER(?) AND IPADDRESS IS NOT NULL;";
@@ -361,6 +379,7 @@ public class GHSExtract {
 	private void sendToCloverleaf(String theRecord) throws AcknowledgmentException, UnsupportedEncodingException {
 		GhsLog.finer("Sending data to Cloverleaf. Full text: " + padZeros(theRecord.length(),6)+theRecord);
 		String exportString = new String(padZeros(theRecord.length(),6)+theRecord);
+		
 		sock.sendMsg(exportString);//.getBytes("utf-8");
 		
 		if(!sock.recvAck()){//no acknowledgment, or acknowledged with incorrect sequence 

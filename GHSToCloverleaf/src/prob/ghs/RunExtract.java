@@ -6,14 +6,11 @@ package prob.ghs;
  * @author ASchaeffer
  */
 
-import java.io.IOException;
-import java.sql.ResultSet;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import javax.naming.NamingException;
 import javax.ws.rs.GET;
@@ -24,7 +21,6 @@ import javax.ws.rs.core.MediaType;
 import java.text.MessageFormat;
 
 import prob.ghs.GHSExtract;
-import prob.pix.pxClient;
 import prob.util.DBConnection;
 import prob.util.Property_Set;
 import prob.util.Encrypt;
@@ -67,20 +63,18 @@ public class RunExtract {
 		}
 		return rtn;
 	}
-	@Path("Send152and174")
-	@GET
-	@Produces(MediaType.TEXT_PLAIN)
-	public static String resend152and174_all(){
+	
+	public static String resendCustom(int[] records, String[] types){
 		String rtn = "Error";
 		try{
-			rtn = resend_test(new int[] {174,152},new String[] {"all"});
+			rtn = resend_test(records,types);
 		}
 		catch(Exception e){
 			return rtn;
 		}
 		return rtn;
 	}
-	
+
 	public static String resend_test(int[] recordsToSend,String[] typesToSend){
 		DBConnection db = null;
 		Property_Set prop = new Property_Set("ghs_db");
@@ -112,9 +106,18 @@ public class RunExtract {
 				if(typesToSend[i] == "all"){
 					setClause.append("ack_all=null");
 				}
+				else if(typesToSend[i] == "dhs"){
+					setClause.append("ack_dhs=null");
+				}
+				else if(typesToSend[i] == "prob"){
+					setClause.append("ack_prob=null");
+				}
+				else if(typesToSend[i] == "dmh"){
+					setClause.append("ack_dmh=null");
+				}
 				
 				if(i!=typesToSend.length-1){
-					whereClause.append(',');
+					setClause.append(',');
 				}
 			}
 			
@@ -181,7 +184,7 @@ public class RunExtract {
 				theEmailSubject = "GHS Export Results - " + type + " Export";
 				theEmailBody = new StringBuffer("GHS Export completed successfully with no errors.");
 			}
-			
+
 			final Property_Set mailProps = new Property_Set("mailserv"); 
 	 		String to   = "adam.schaeffer@probation.lacounty.gov";
 			String from = "adam.schaeffer@probation.lacounty.gov";
@@ -216,7 +219,6 @@ public class RunExtract {
 				frlFile.close();
 		}
 
-
 		if(errors != null && errors.isEmpty()){
 			return "Export completed successfully. No errors detected.";
 		}
@@ -229,86 +231,11 @@ public class RunExtract {
 		}
 	}
 	
-	public static String resendTestRecords(){
-		Logger l = Logger.getLogger(DBConnection.class.getName());
-		FileHandler fh = null;
-		try {
-			fh = new FileHandler("GHS_Selfrun_Export.log",true);
-			fh.setLevel(Level.FINEST);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		SimpleFormatter formatter = new SimpleFormatter();
-		
-		if(fh!=null){
-			fh.setFormatter(formatter);
-			l.addHandler(fh);
-		}
-		l.setLevel(Level.FINEST);
-		
-		DBConnection db = null;
-		Property_Set prop = new Property_Set("ghs_db");
-		
-		String driver = prop.getProperty("driver", false);
-		
-		try{
-			if(driver==null){
-				db = new DBConnection(prop.getProperty("url", true),l);
-			}
-			else{
-				db = new DBConnection(prop.getProperty("url", true),
-								      prop.getProperty("driver",false),
-								      prop.getProperty("username",false),
-								      prop.getProperty("password",false),l);
-			}
-
-			ArrayList<String> recordsToExport = new ArrayList<String>();
-			recordsToExport.add("174");
-			
-			StringBuilder whereClause = new StringBuilder(" where ");
-			for(int i = 0; i < recordsToExport.size(); i++){
-				whereClause.append("sid=").append(recordsToExport.get(i));
-				
-				if(i != recordsToExport.size()-1){
-					whereClause.append(" or ");
-				}
-			}
-			
-			String query = MessageFormat.format("update staging set ack_all = null,ack_prob=null,ack_dhs=null,ack_dmh=null,PROCESSED_DATETIME_ALL=null,PROCESSED_DATETIME_PROB=null,PROCESSED_DATETIME_DHS=null,PROCESSED_DATETIME_DMH=null{0};",whereClause.toString());
-			
-			//db.Update(query);
-		} catch (NamingException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} catch (SQLException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} catch (RuntimeException e) {
-			return e.getClass() + ": " + e.getMessage();
-		} finally {
-			if(db!=null)
-				db.close();
-		}
-
-		StringBuilder rtn = new StringBuilder("Running ALL export:<br>");
-		rtn.append(ExportGHS("all",l)).append("<br><br>");
-		rtn.append("Running Probation export:<br>").append(ExportGHS("prob",l)).append("<br><br>");
-		rtn.append("Running DHS export:<br>").append(ExportGHS("dhs",l)).append("<br><br>");
-		rtn.append("Running DMH export:<br>").append(ExportGHS("dmh",l)).append("<br><br>");
-		return rtn.toString();
-	}
-
 	public static void main(String args[]){
-//		System.out.println(ExportGHS("all"));
-		
-		
-//		System.out.println(resendTestRecords());
-		
-//		resend174_all();
-		
-//		System.out.println("Calling web service...");
-//		SoapClient.getNameFromID("e613467");
-//		System.out.println("Fin");
-
+//		resendCustom(new int[] {197},new String[] {"dhs"});
+//		ExportGHS("all",l);
+//		ExportGHS("prob",l);
+//		ExportGHS("dhs",l);
+//		ExportGHS("dmh",l);
 	}
 }

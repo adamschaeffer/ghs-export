@@ -17,6 +17,7 @@ public class ResponseBean {
 	public String question;
 	public String question_scale;
 	public String question_config;
+	public String exists;
 	
 	private HashMap<String,String> customValues = new HashMap<String,String>();
 	
@@ -30,32 +31,39 @@ public class ResponseBean {
 	@Override
 	public String toString(){
 		String format = (String) customValues.get("format");
+		String export_type = (String) customValues.get("export_type");
+		String scale_prefix = "";
+		String response_formatted = question_response.replaceAll(java.util.regex.Matcher.quoteReplacement("\r\n")," ").trim();
 		
 		StringBuilder sb = new StringBuilder();
 		
 		if(format.toLowerCase().equals("expanded")){
 			String question_prefix = MessageFormat.format("QID: {0} ({1}) ",question_alias,question_id);
 			
+			if(response_formatted.isEmpty()){
+				response_formatted = "NOT ANSWERED";
+			}
+
 			//Question text
 			sb.append(Format.format(question_alias,11))
 			  .append(Format.format(new Integer(set_id_factory.next()).toString(),3))
 			  .append(Format.format(String.format("%s%s",question_prefix,question),300)); //TODO: RESPONSE LENGTH
-//			  .append(Format.format("",80));
-			}
-		
-		String scale_prefix = "";
-		if(!question_scale.isEmpty()){
-			scale_prefix = "Alert: " + question_scale + " ";
 		}
-		
+
+		if(!export_type.toLowerCase().equals("all")){
+			if(!question_scale.isEmpty()){
+				scale_prefix = "Alert: " + question_scale + " ";
+			}
+		}		
+
 		//Question response
 		sb.append(Format.format(question_alias,11))
 		  .append(Format.format(new Integer(set_id_factory.next()).toString(),3))
-		  .append(Format.format(scale_prefix + question_response.replaceAll(java.util.regex.Matcher.quoteReplacement("\r\n")," "),300));//TODO: RESPONSE LENGTH
-//		  .append(Format.format("",80));
+		  .append(Format.format(scale_prefix + response_formatted,300));//TODO: RESPONSE LENGTH
 		
 		return sb.toString();
 	}
+	
 	public ResponseBean convertResponse() {
 		Character rowDelimiter = new Character((char)10);
 		
@@ -81,6 +89,7 @@ public class ResponseBean {
 		question_response = unSplitResponses(respList);
 		return this;
 	}
+	
 	private String unSplitResponses(String[] respList) {
 		StringBuilder response_list = new StringBuilder("");
 		
