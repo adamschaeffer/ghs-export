@@ -56,6 +56,9 @@ public class SessionAndResponseData {
 	public String getPDJ() {
 		return session.pdj;
 	}
+	public String getLocation(){
+		return session.facility_id;
+	}
 	public String getTimestamp(boolean prettyFormat){
 		if(prettyFormat){
 			StringBuilder datetime = new StringBuilder("");

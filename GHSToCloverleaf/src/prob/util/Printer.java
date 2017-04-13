@@ -29,7 +29,7 @@ public class Printer {
 		printerStream.write(cmd.getBytes());
 		printerStream.flush();
 		
-		cmd = "@PJL JOB NAME = \"GHS TEST PRINT\"\r\n";
+		cmd = "@PJL JOB [NAME = \"GHS TEST PRINT\"]\r\n";
 		printerStream.write(cmd.getBytes());
 		printerStream.flush();
 		
@@ -39,6 +39,9 @@ public class Printer {
 	}
 
 	public void print(String msg){
+		if(ipAddress == null && ipAddress.isEmpty())
+			return;
+		
 		try {
 			initPrintJob();
 			String cmd = (char)27 + "E" + msg + "\r\n";
@@ -50,12 +53,18 @@ public class Printer {
 			closePrintJob();
 		}
 	}
+	
 	public void print(File file) throws IOException {
+		if(ipAddress == null && ipAddress.isEmpty())
+			return;
+		
 		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
 		DataInputStream dataIn = new DataInputStream(bis);
 		
 		try {
 			initPrintJob();
+			String resetCmd = new String((char)27 + "E");
+			printerStream.write(resetCmd.getBytes());
 			while(dataIn.available() > 0){
 				int dataFromFile;
 				
@@ -87,11 +96,11 @@ public class Printer {
 		* but they end up printing to a new page, so it looks like my source was incorrect.
 		* However, if there's an issue with this class messing with printers, start investigating here.
 		 */			
-			//String cmd = ESCAPE + "@JPL EOF \r\n";
-			//printerStream.write(cmd.getBytes());
-			
-			//String cmd = ESCAPE;
-			//printerStream.write(cmd.getBytes());
+//			String cmd = ESCAPE + " @PJL EOJ NAME=\"GHS TEST PRINT\" \r\n";
+//			printerStream.write(cmd.getBytes());
+//			
+//			cmd = ESCAPE;
+//			printerStream.write(cmd.getBytes());
 			try{
 				Thread.sleep(20000);
 			} catch(InterruptedException e){

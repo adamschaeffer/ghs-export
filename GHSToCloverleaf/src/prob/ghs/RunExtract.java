@@ -22,6 +22,8 @@ import java.text.MessageFormat;
 
 import prob.ghs.GHSExtract;
 import prob.util.DBConnection;
+import prob.util.PrintJob;
+import prob.util.Printer;
 import prob.util.Property_Set;
 import prob.util.Encrypt;
 import prob.util.MailServer;
@@ -230,12 +232,18 @@ public class RunExtract {
 			return "Export terminated abnormally. Please see log for details.";
 		}
 	}
-	
+
 	public static void main(String args[]){
-//		resendCustom(new int[] {197},new String[] {"dhs"});
-//		ExportGHS("all",l);
-//		ExportGHS("prob",l);
+		resendCustom(new int[] {210},new String[] {"prob"});
+//		ExportGHS("dhs",l);
+		ExportGHS("prob",l);
 //		ExportGHS("dhs",l);
 //		ExportGHS("dmh",l);
+/*
+		Printer p = new Printer("10.120.101.29",9100);
+		PrintJob pj = new PrintJob(p);
+		pj.setMessage("This is a test");
+		pj.run();
+*/
 	}
 }

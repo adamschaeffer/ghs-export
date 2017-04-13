@@ -40,6 +40,7 @@ import java.util.logging.SimpleFormatter;
 
 import javax.naming.NamingException;
 
+import prob.ghs.beans.PrintMessage;
 import prob.ghs.beans.ResponseBean;
 import prob.ghs.beans.SessionBean;
 import prob.ghs.exception.AcknowledgmentException;
@@ -61,7 +62,7 @@ public class GHSExtract {
 	private pxSocket sock                             = null;
 	private Property_Set export_props                 = null;
 	private DBConnection conn                         = null;
-	private ArrayList<StringBuilder> printMessage     = new ArrayList<StringBuilder>();
+	private ArrayList<PrintMessage> printMessage      = new ArrayList<PrintMessage>();
 	private ArrayList<SessionAndResponseData> theFile = new ArrayList<SessionAndResponseData>();
 
 	private SimpleDateFormat datetime_format          = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -163,11 +164,16 @@ public class GHSExtract {
 				data.setCustomValue("export_type",export_props.getProperty("title",true).toUpperCase().substring(0,3));//substring will convert probation to prob. dhs and 3-character titles will remain 3 characters.
 				try{
 					processRow(data);
-					printMessage.add(new StringBuilder("PDJ no.: ")
-					            		.append(data.getPDJ())
-					            		.append(": A survey has been completed on ")
-					            		.append(data.getTimestamp(true))
-					            		.append("\n\n"));
+
+					String PrintableMessage = new StringBuilder("PDJ no.: ")
+							            		.append(data.getPDJ())
+							            		.append(": A survey has been completed on ")
+							            		.append(data.getTimestamp(true))
+							            		.append("\n\n").toString();
+					String PrintableLocation = data.getLocation();				
+				
+					PrintMessage newPrintMessage = new PrintMessage(PrintableMessage,PrintableLocation);
+					printMessage.add(newPrintMessage);
 				} catch(Exception e){
 					processingErrors.add("Session " + data.getSessionID() + ", Error: " + e.getMessage());
 				}
@@ -177,10 +183,11 @@ public class GHSExtract {
 		}
 		finally{
 			if(!printMessage.isEmpty()){
-				ArrayList<Printer> printerList = getPrinterList();
 				for(int i = 0; i < printMessage.size(); i++){
+					PrintMessage thisMessage = printMessage.get(i);
+					ArrayList<Printer> printerList = getPrinterList(thisMessage.location);
 					PrintJob pj = new PrintJob();
-					pj.setMessage(printMessage.get(i).toString());
+					pj.setMessage(thisMessage.msg);
 					pj.addPrinter(printerList);
 					pj.run();
 				}
@@ -297,15 +304,15 @@ public class GHSExtract {
 		return beans;
 	}
 
-	private ArrayList<Printer> getPrinterList(){
+	private ArrayList<Printer> getPrinterList(String location){
 		ArrayList<Printer> printerList = new ArrayList<Printer>();
-		String theQuery = "SELECT DISTINCT IPADDRESS,PORT FROM PRINTERS WHERE UPPER(DOCTYPE)=UPPER(?) AND IPADDRESS IS NOT NULL;";
-		String docType = export_props.getProperty("DOCTYPE",false);
+		String theQuery = "SELECT DISTINCT IPADDRESS,PORT,LOCATION FROM PRINTERS WHERE UPPER(DOCTYPE)=UPPER(?) AND UPPER(LOCATION)=UPPER(?) AND IPADDRESS IS NOT NULL;";
+		String docType = export_props.getProperty("doctype",false);
 		
 		if(docType == null)
 			return null;
 		try{
-			ResultSet rs = conn.Query(theQuery,docType);
+			ResultSet rs = conn.Query(theQuery,docType,location);
 	
 			while(rs.next()){
 				printerList.add(new Printer(rs.getString("IPADDRESS"),rs.getInt("PORT")));
