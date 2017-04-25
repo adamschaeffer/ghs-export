@@ -27,17 +27,12 @@ import java.util.Date;
 import java.util.Iterator;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-
 import javax.naming.NamingException;
 
 import prob.ghs.beans.PrintMessage;

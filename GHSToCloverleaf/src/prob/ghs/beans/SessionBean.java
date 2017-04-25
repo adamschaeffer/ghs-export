@@ -8,10 +8,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
-
 import prob.ghs.beans.Format;
 import prob.ghs.soap.SoapClient;
 import sun.misc.BASE64Encoder;

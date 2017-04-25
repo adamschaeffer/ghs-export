@@ -22,8 +22,6 @@ import java.text.MessageFormat;
 
 import prob.ghs.GHSExtract;
 import prob.util.DBConnection;
-import prob.util.PrintJob;
-import prob.util.Printer;
 import prob.util.Property_Set;
 import prob.util.Encrypt;
 import prob.util.MailServer;
